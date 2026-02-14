@@ -1238,24 +1238,15 @@ async function checkAndFetchNote() {
   document.getElementById('readNotFound').style.display = 'none';
 
   try {
-    const existsRes = await fetch('/api/notes/' + currentNoteId + '/exists');
-    const existsData = await existsRes.json();
-
-    if (!existsData.exists) {
-      document.getElementById('readLoading').style.display = 'none';
-      document.getElementById('readNotFound').style.display = 'block';
-      return;
-    }
-
-    if (existsData.password_protected) {
+    await fetchNote(null);
+  } catch (e) {
+    if (e.message === 'password_required') {
       document.getElementById('readLoading').style.display = 'none';
       showPasswordModal();
     } else {
-      await fetchNote(null);
+      document.getElementById('readLoading').style.display = 'none';
+      document.getElementById('readNotFound').style.display = 'block';
     }
-  } catch (e) {
-    document.getElementById('readLoading').style.display = 'none';
-    document.getElementById('readNotFound').style.display = 'block';
   }
 }
 
