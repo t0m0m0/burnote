@@ -591,6 +591,15 @@ function downloadAttachment() {
   URL.revokeObjectURL(url);
 }
 
+// ---------------------------------------------------------------------------
+// Bind event listeners (CSP-safe, no inline onclick)
+// ---------------------------------------------------------------------------
+document.getElementById('createBtn').addEventListener('click', createNote);
+document.getElementById('copyBtn').addEventListener('click', copyUrl);
+document.getElementById('fileRemoveBtn').addEventListener('click', function(e) { removeAttachment(e); });
+document.getElementById('downloadBtn').addEventListener('click', downloadAttachment);
+document.getElementById('submitPasswordBtn').addEventListener('click', submitPassword);
+
 setupFileAttachment();
 window.addEventListener('popstate', init);
 init();
