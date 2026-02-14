@@ -12,11 +12,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024  # 15MB (encrypted file + base64 overhead)
 
+RATE_LIMIT_STORAGE_URI = os.environ.get("RATE_LIMIT_STORAGE_URI", "redis://localhost:6379")
+
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["100/minute"],
-    storage_uri="memory://",
+    storage_uri=RATE_LIMIT_STORAGE_URI,
     strategy="fixed-window",
 )
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kemuri.db")
