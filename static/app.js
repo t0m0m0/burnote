@@ -512,7 +512,7 @@ document.getElementById('burnToggle').dispatchEvent(new Event('change'));
 // ---------------------------------------------------------------------------
 // File attachment: drag & drop / click to select
 // ---------------------------------------------------------------------------
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 
 function setupFileAttachment() {
   const dropZone = document.getElementById('dropZone');
