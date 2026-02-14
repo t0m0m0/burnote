@@ -902,7 +902,8 @@ async function fetchNote(id) {
     }
 
     if (data.burn_after_read) {
-      startBurnSequence();
+      const expiresAt = new Date(data.expires_at);
+      startBurnSequence(expiresAt);
     }
   } catch (e) {
     document.getElementById('readLoading').style.display = 'none';
@@ -914,15 +915,28 @@ async function fetchNote(id) {
 // Burn sequence (unchanged)
 // ---------------------------------------------------------------------------
 
-function startBurnSequence() {
-  const BURN_SECONDS = 8;
+function formatRemaining(totalSeconds) {
+  if (totalSeconds <= 0) return '消滅中...';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}時間${m}分${s}秒後に消滅`;
+  if (m > 0) return `${m}分${s}秒後に消滅`;
+  return `${s}秒後に消滅`;
+}
+
+function startBurnSequence(expiresAt) {
+  const now = Date.now();
+  const totalSeconds = Math.max(0, Math.round((expiresAt.getTime() - now) / 1000));
+  if (totalSeconds <= 0) { burnTheNote(); return; }
+
   const container = document.getElementById('burnTimerContainer');
 
   container.innerHTML = `
     <div class="burn-timer-bar">
       <div class="burn-timer-label">
-        <span class="timer-left">🔥 <span id="burnCountText">${BURN_SECONDS}秒後に消滅</span></span>
-        <span style="font-size:11px; color:var(--text-dim); font-weight:400;">読んだらお早めに</span>
+        <span class="timer-left">🔥 <span id="burnCountText">${formatRemaining(totalSeconds)}</span></span>
+        <span style="font-size:11px; color:var(--text-dim); font-weight:400;">有効期限で自動消滅</span>
       </div>
       <div class="burn-progress-track">
         <div class="burn-progress-fill" id="burnProgressFill" style="width:100%"></div>
@@ -930,22 +944,23 @@ function startBurnSequence() {
     </div>
   `;
 
-  let remaining = BURN_SECONDS;
   const countText = document.getElementById('burnCountText');
   const progressFill = document.getElementById('burnProgressFill');
 
   requestAnimationFrame(() => {
     progressFill.style.width = '0%';
-    progressFill.style.transition = `width ${BURN_SECONDS}s linear`;
+    progressFill.style.transition = `width ${totalSeconds}s linear`;
   });
 
+  const startTime = Date.now();
   const timer = setInterval(() => {
-    remaining--;
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const remaining = totalSeconds - elapsed;
     if (remaining <= 0) {
       clearInterval(timer);
       burnTheNote();
     } else {
-      countText.textContent = `${remaining}秒後に消滅`;
+      countText.textContent = formatRemaining(remaining);
     }
   }, 1000);
 }
