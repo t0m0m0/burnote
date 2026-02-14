@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=exedev
 WorkingDirectory=/home/exedev/burnote
-ExecStart=/usr/bin/python3 /home/exedev/burnote/app.py
+ExecStart=/home/exedev/.local/bin/gunicorn --bind 0.0.0.0:8000 --workers 2 app:app
 Restart=always
 RestartSec=3
 Environment=FLASK_ENV=production
