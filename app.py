@@ -138,6 +138,25 @@ def read_note(note_id):
         return "", 204
 
     db = get_db()
+
+    # Try atomic burn-after-read first: DELETE + RETURNING guarantees only
+    # one request can ever retrieve the note content.  (fixes #6)
+    row = db.execute(
+        "DELETE FROM notes WHERE id = ? AND burn_after_read = 1 RETURNING *",
+        (note_id,),
+    ).fetchone()
+
+    if row is not None:
+        db.commit()
+        return jsonify({
+            "content": row["content"],
+            "created_at": row["created_at"],
+            "burn_after_read": True,
+            "expires_at": row["expires_at"],
+            "read_count": 1,
+        })
+
+    # Not a burn-after-read note (or doesn't exist) — normal path
     row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
 
     if row is None:
@@ -147,18 +166,13 @@ def read_note(note_id):
     db.execute("UPDATE notes SET read_count = read_count + 1 WHERE id = ?", (note_id,))
     db.commit()
 
-    result = {
+    return jsonify({
         "content": row["content"],
         "created_at": row["created_at"],
-        "burn_after_read": bool(row["burn_after_read"]),
+        "burn_after_read": False,
         "expires_at": row["expires_at"],
         "read_count": row["read_count"] + 1,
-    }
-
-    # Burn after read: note stays until expires_at, then cleanup_expired() removes it.
-    # The client will show a countdown until the expiry time.
-
-    return jsonify(result)
+    })
 
 
 @app.route("/api/notes/<note_id>/exists", methods=["GET", "OPTIONS"])
