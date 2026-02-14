@@ -339,12 +339,130 @@ select:focus {
   margin-top: 16px;
   font-size: 14px;
   color: var(--danger);
-  animation: pulse 2s ease-in-out;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Burn timer bar (inline, above note content) */
+.burn-timer-bar {
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.burn-timer-bar .burn-timer-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--danger);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.burn-timer-bar .burn-timer-label .timer-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.burn-timer-bar .burn-progress-track {
+  width: 100%;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.burn-timer-bar .burn-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--danger));
+  border-radius: 2px;
+  transition: width 1s linear;
+  box-shadow: 0 0 8px rgba(255,68,68,0.5);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Burn animation on note content */
+.note-content.burning {
+  animation: burnAway 1.5s ease-in forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.note-content.burning::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100%;
+  background: linear-gradient(to top,
+    rgba(255,80,20,0.9) 0%,
+    rgba(255,140,50,0.6) 30%,
+    rgba(255,200,80,0.3) 60%,
+    transparent 100%);
+  animation: burnSweep 1.5s ease-in forwards;
+}
+
+@keyframes burnAway {
+  0% { opacity: 1; filter: brightness(1); }
+  40% { opacity: 1; filter: brightness(1.3) saturate(0.5); }
+  70% { opacity: 0.6; filter: brightness(0.8) saturate(0); }
+  100% { opacity: 0; filter: brightness(0) saturate(0); transform: scale(0.98); }
+}
+
+@keyframes burnSweep {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(-10%); }
+}
+
+/* Ashes state — replaces the note card after burn */
+.ashes-state {
+  text-align: center;
+  padding: 48px 28px;
+  animation: slideIn 0.6s ease;
+}
+
+.ashes-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: ashFloat 3s ease-in-out infinite;
+}
+
+@keyframes ashFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.ashes-state h2 {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--danger));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.ashes-state .ashes-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+.ashes-state .ashes-detail {
+  color: rgba(136,136,170,0.6);
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.ashes-line {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  margin: 20px auto;
+  border: none;
 }
 
 .not-found {
@@ -526,16 +644,23 @@ select:focus {
       <span>メモを復号中...</span>
     </div>
     <div id="readContent" class="card" style="display:none;">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
-        <span style="font-size:20px;">📄</span>
-        <strong>秘密のメモ</strong>
+      <div id="readNoteInner">
+        <div id="burnTimerContainer"></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+          <span style="font-size:20px;">📄</span>
+          <strong>秘密のメモ</strong>
+        </div>
+        <div class="note-content" id="noteText"></div>
+        <div class="meta" id="noteMeta"></div>
       </div>
-      <div class="note-content" id="noteText"></div>
-      <div class="meta" id="noteMeta"></div>
-      <div class="destroyed-banner" id="destroyedBanner" style="display:none;">
-        🔥 このメモは完全に消滅しました
+      <div id="ashesState" class="ashes-state" style="display:none;">
+        <div class="ashes-icon">🔥</div>
+        <h2>このメモは消滅しました</h2>
+        <p class="ashes-sub">内容はサーバーから完全に削除されました。<br>もう二度と誰も読むことはできません。</p>
+        <hr class="ashes-line">
+        <p class="ashes-detail">🔥 burn after read により自動消滅</p>
       </div>
-      <a href="/" class="btn-new">+ 新しいメモを作成</a>
+      <a href="/" class="btn-new" style="margin-top:20px;">+ 新しいメモを作成</a>
     </div>
     <div id="readNotFound" class="card" style="display:none;">
       <div class="not-found">
@@ -644,9 +769,10 @@ async function fetchNote(id) {
   document.getElementById('readLoading').style.display = 'flex';
   document.getElementById('readContent').style.display = 'none';
   document.getElementById('readNotFound').style.display = 'none';
+  document.getElementById('readNoteInner').style.display = 'block';
+  document.getElementById('ashesState').style.display = 'none';
 
   try {
-    // Artificial delay for drama
     await new Promise(r => setTimeout(r, 800));
 
     const res = await fetch(API + '/api/notes/' + id);
@@ -667,12 +793,62 @@ async function fetchNote(id) {
       `<span>📅 ${created}</span><span>⏱ 有効期限: ${expires}</span>`;
 
     if (data.burn_after_read) {
-      document.getElementById('destroyedBanner').style.display = 'block';
+      startBurnSequence();
     }
   } catch (e) {
     document.getElementById('readLoading').style.display = 'none';
     document.getElementById('readNotFound').style.display = 'block';
   }
+}
+
+function startBurnSequence() {
+  const BURN_SECONDS = 8;
+  const container = document.getElementById('burnTimerContainer');
+
+  container.innerHTML = `
+    <div class="burn-timer-bar">
+      <div class="burn-timer-label">
+        <span class="timer-left">🔥 <span id="burnCountText">${BURN_SECONDS}秒後に消滅</span></span>
+        <span style="font-size:11px; color:var(--text-dim); font-weight:400;">読んだらお早めに</span>
+      </div>
+      <div class="burn-progress-track">
+        <div class="burn-progress-fill" id="burnProgressFill" style="width:100%"></div>
+      </div>
+    </div>
+  `;
+
+  let remaining = BURN_SECONDS;
+  const countText = document.getElementById('burnCountText');
+  const progressFill = document.getElementById('burnProgressFill');
+
+  // Start shrinking the progress bar
+  requestAnimationFrame(() => {
+    progressFill.style.width = '0%';
+    progressFill.style.transition = `width ${BURN_SECONDS}s linear`;
+  });
+
+  const timer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(timer);
+      burnTheNote();
+    } else {
+      countText.textContent = `${remaining}秒後に消滅`;
+    }
+  }, 1000);
+}
+
+function burnTheNote() {
+  const noteContent = document.getElementById('noteText');
+  const noteInner = document.getElementById('readNoteInner');
+
+  noteContent.classList.add('burning');
+
+  // After burn animation, swap to ashes state
+  setTimeout(() => {
+    noteInner.style.display = 'none';
+    document.getElementById('ashesState').style.display = 'block';
+  }, 1600);
 }
 
 async function loadStats() {
