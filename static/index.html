@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
 <title>BurNote — 読んだら消える秘密のメモ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
 <style>
@@ -711,7 +712,14 @@ function base64urlToArrayBuf(s) {
   return base64ToArrayBuf(s);
 }
 
+function requireCryptoSubtle() {
+  if (!crypto || !crypto.subtle) {
+    throw new Error('Web Crypto API が利用できません。HTTPS 環境でアクセスしてください。');
+  }
+}
+
 async function generateEncryptionKey() {
+  requireCryptoSubtle();
   return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
 }
 
@@ -887,6 +895,11 @@ async function fetchNote(id) {
     const expires = new Date(data.expires_at).toLocaleString();
     document.getElementById('noteMeta').innerHTML =
       `<span>🔐 E2E暗号化済</span><span>📅 ${created}</span><span>⏱ 有効期限: ${expires}</span>`;
+
+    // Remove encryption key from URL / browser history
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
 
     if (data.burn_after_read) {
       startBurnSequence();
