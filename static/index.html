@@ -534,15 +534,6 @@ select:focus {
 
 .btn-coffee .icon { font-size: 20px; }
 
-/* Stats */
-.stats {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.stats span { color: var(--accent); font-weight: 600; }
 
 /* Footer */
 .footer {
@@ -680,9 +671,6 @@ select:focus {
     </a>
   </div>
 
-  <div class="stats" id="statsBar">
-    累計 <span id="totalNotes">—</span> 件作成 · 現在 <span id="activeNotes">—</span> 件アクティブ
-  </div>
 
   <div class="footer">
     🔥 <a href="#">BurNote</a> · あなたの秘密を、あなたの手で
@@ -701,7 +689,6 @@ function init() {
   } else {
     showCreateView();
   }
-  loadStats();
 }
 
 function showCreateView() {
@@ -743,7 +730,6 @@ async function createNote() {
       document.getElementById('burnToggle').checked ? 'flex' : 'none';
     document.getElementById('resultCard').classList.add('show');
     document.getElementById('noteContent').value = '';
-    loadStats();
   } catch (e) {
     alert('エラー: ' + e.message);
   } finally {
@@ -851,14 +837,6 @@ function burnTheNote() {
   }, 1600);
 }
 
-async function loadStats() {
-  try {
-    const res = await fetch(API + '/api/stats');
-    const data = await res.json();
-    document.getElementById('totalNotes').textContent = data.total_notes_created;
-    document.getElementById('activeNotes').textContent = data.active_notes;
-  } catch (e) {}
-}
 
 // Client-side routing for /note/<id>
 window.addEventListener('popstate', init);
