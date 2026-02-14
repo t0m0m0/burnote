@@ -8,6 +8,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, static_folder="static")
+app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024  # 15MB (encrypted file + base64 overhead)
 
 limiter = Limiter(
     get_remote_address,
@@ -57,6 +58,10 @@ def init_db():
         conn.execute("ALTER TABLE notes ADD COLUMN max_reads INTEGER NOT NULL DEFAULT 0")
     if "password_hash" not in existing_columns:
         conn.execute("ALTER TABLE notes ADD COLUMN password_hash TEXT")
+    if "attachment_data" not in existing_columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN attachment_data TEXT")
+    if "attachment_meta" not in existing_columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN attachment_meta TEXT")
     conn.commit()
     conn.close()
 
@@ -81,9 +86,13 @@ def create_note():
     if request.method == "OPTIONS":
         return "", 204
     data = request.get_json(silent=True)
-    if not data or not data.get("content"):
-        return jsonify({"error": "content is required"}), 400
-    content = data["content"]
+    if not data:
+        return jsonify({"error": "request body is required"}), 400
+    content = data.get("content")
+    attachment_data = data.get("attachment_data")
+    attachment_meta = data.get("attachment_meta")
+    if not content and not attachment_data:
+        return jsonify({"error": "content or attachment is required"}), 400
     burn_after_read = bool(data.get("burn_after_read", False))
     expires_minutes = int(data.get("expires_minutes", 60))
     expires_minutes = max(1, min(expires_minutes, 1440))
@@ -96,9 +105,9 @@ def create_note():
     expires_at = now + timedelta(minutes=expires_minutes)
     db = get_db()
     db.execute(
-        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash) "
-        "VALUES (?, ?, ?, ?, ?, 0, ?, ?)",
-        (note_id, content, int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash),
+        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, attachment_data, attachment_meta) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
+        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, attachment_data, attachment_meta),
     )
     db.execute("UPDATE stats SET value = value + 1 WHERE key = 'total_notes_created'")
     db.commit()
@@ -128,7 +137,7 @@ def read_note(note_id):
     if row["burn_after_read"]:
         db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
         db.commit()
-        return jsonify({
+        resp = {
             "content": row["content"],
             "created_at": row["created_at"],
             "burn_after_read": True,
@@ -136,7 +145,11 @@ def read_note(note_id):
             "read_count": 1,
             "max_reads": row["max_reads"],
             "password_protected": is_password_protected,
-        })
+        }
+        if row["attachment_data"]:
+            resp["attachment_data"] = row["attachment_data"]
+            resp["attachment_meta"] = row["attachment_meta"]
+        return jsonify(resp)
     # Normal notes with max_reads
     max_reads = row["max_reads"]
     current_count = row["read_count"]
@@ -151,7 +164,7 @@ def read_note(note_id):
     else:
         db.execute("UPDATE notes SET read_count = read_count + 1 WHERE id = ?", (note_id,))
         db.commit()
-    return jsonify({
+    resp = {
         "content": row["content"],
         "created_at": row["created_at"],
         "burn_after_read": False,
@@ -159,7 +172,11 @@ def read_note(note_id):
         "read_count": new_count,
         "max_reads": max_reads,
         "password_protected": is_password_protected,
-    })
+    }
+    if row["attachment_data"]:
+        resp["attachment_data"] = row["attachment_data"]
+        resp["attachment_meta"] = row["attachment_meta"]
+    return jsonify(resp)
 
 @app.route("/api/notes/<note_id>/exists", methods=["GET", "OPTIONS"])
 @limiter.limit("30/minute")
