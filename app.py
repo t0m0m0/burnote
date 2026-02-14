@@ -2,6 +2,7 @@ import os
 import uuid
 import sqlite3
 import time
+import base64
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_limiter import Limiter
@@ -50,15 +51,32 @@ def init_db():
     """)
     # Migrate: add missing columns to existing tables
     cursor = conn.execute("PRAGMA table_info(notes)")
-    existing_columns = {row[1] for row in cursor.fetchall()}
-    if "max_reads" not in existing_columns:
+    columns = {row[1]: row[2] for row in cursor.fetchall()}  # name -> type
+    if "max_reads" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN max_reads INTEGER NOT NULL DEFAULT 0")
-    if "password_hash" not in existing_columns:
+    if "password_hash" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN password_hash TEXT")
-    if "attachment_data" not in existing_columns:
-        conn.execute("ALTER TABLE notes ADD COLUMN attachment_data TEXT")
-    if "attachment_meta" not in existing_columns:
+    if "attachment_meta" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN attachment_meta TEXT")
+    if "attachment_data" not in columns:
+        # Fresh install: add as BLOB directly
+        conn.execute("ALTER TABLE notes ADD COLUMN attachment_data BLOB")
+    elif columns.get("attachment_data", "").upper() == "TEXT":
+        # Migrate TEXT -> BLOB: rename old column, add new BLOB column, copy data, drop old
+        conn.executescript("""
+            ALTER TABLE notes RENAME COLUMN attachment_data TO attachment_data_old;
+            ALTER TABLE notes ADD COLUMN attachment_data BLOB;
+        """)
+        # Convert existing Base64 TEXT data to binary BLOB
+        rows = conn.execute("SELECT id, attachment_data_old FROM notes WHERE attachment_data_old IS NOT NULL").fetchall()
+        for row in rows:
+            try:
+                binary_data = base64.b64decode(row[1])
+                conn.execute("UPDATE notes SET attachment_data = ? WHERE id = ?", (binary_data, row[0]))
+            except Exception:
+                # If decoding fails, store raw bytes as-is
+                conn.execute("UPDATE notes SET attachment_data = ? WHERE id = ?", (row[1].encode('utf-8'), row[0]))
+        conn.execute("ALTER TABLE notes DROP COLUMN attachment_data_old")
     conn.commit()
     conn.close()
 
@@ -95,12 +113,19 @@ def create_note():
     if not data:
         return jsonify({"error": "request body is required"}), 400
     content = data.get("content")
-    attachment_data = data.get("attachment_data")
+    attachment_data_b64 = data.get("attachment_data")
     attachment_meta = data.get("attachment_meta")
-    if bool(attachment_data) != bool(attachment_meta):
+    if bool(attachment_data_b64) != bool(attachment_meta):
         return jsonify({"error": "attachment_data and attachment_meta must both be provided"}), 400
-    if not content and not attachment_data:
+    if not content and not attachment_data_b64:
         return jsonify({"error": "content or attachment is required"}), 400
+    # Decode Base64 to binary for BLOB storage
+    attachment_blob = None
+    if attachment_data_b64:
+        try:
+            attachment_blob = base64.b64decode(attachment_data_b64)
+        except Exception:
+            return jsonify({"error": "attachment_data must be valid Base64"}), 400
     burn_after_read = bool(data.get("burn_after_read", False))
     expires_minutes = int(data.get("expires_minutes", 60))
     expires_minutes = max(1, min(expires_minutes, 1440))
@@ -115,7 +140,7 @@ def create_note():
     db.execute(
         "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, attachment_data, attachment_meta) "
         "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
-        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, attachment_data, attachment_meta),
+        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, attachment_blob, attachment_meta),
     )
     db.commit()
     base_url = request.host_url.rstrip("/")
@@ -133,7 +158,8 @@ def read_note(note_id):
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
 
-    row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, attachment_data, attachment_meta"
+    row = db.execute(f"SELECT {_NOTE_COLS} FROM notes WHERE id = ?", (note_id,)).fetchone()
     if row is None:
         return jsonify({"error": "Note not found or has expired"}), 404
     # Reject expired notes
@@ -148,6 +174,26 @@ def read_note(note_id):
             return jsonify({"error": "password_required", "password_protected": True}), 403
     is_password_protected = row["password_hash"] is not None
 
+    def _build_response(row, read_count, burn):
+        resp = {
+            "content": row["content"],
+            "created_at": row["created_at"],
+            "burn_after_read": burn,
+            "expires_at": row["expires_at"],
+            "read_count": read_count,
+            "max_reads": row["max_reads"],
+            "password_protected": is_password_protected,
+        }
+        if row["attachment_data"]:
+            # Convert BLOB back to Base64 for JSON response
+            attachment_bytes = row["attachment_data"]
+            if isinstance(attachment_bytes, bytes):
+                resp["attachment_data"] = base64.b64encode(attachment_bytes).decode("ascii")
+            else:
+                resp["attachment_data"] = attachment_bytes
+            resp["attachment_meta"] = row["attachment_meta"]
+        return resp
+
     # Burn-after-read: atomic DELETE to prevent race conditions
     if row["burn_after_read"]:
         deleted = db.execute(
@@ -158,19 +204,7 @@ def read_note(note_id):
             # Another request already consumed this note
             return jsonify({"error": "Note not found or has expired"}), 404
         db.commit()
-        resp = {
-            "content": row["content"],
-            "created_at": row["created_at"],
-            "burn_after_read": True,
-            "expires_at": row["expires_at"],
-            "read_count": 1,
-            "max_reads": row["max_reads"],
-            "password_protected": is_password_protected,
-        }
-        if row["attachment_data"]:
-            resp["attachment_data"] = row["attachment_data"]
-            resp["attachment_meta"] = row["attachment_meta"]
-        return jsonify(resp)
+        return jsonify(_build_response(row, 1, True))
     # Normal notes with max_reads
     max_reads = row["max_reads"]
     current_count = row["read_count"]
@@ -185,19 +219,7 @@ def read_note(note_id):
     else:
         db.execute("UPDATE notes SET read_count = read_count + 1 WHERE id = ?", (note_id,))
         db.commit()
-    resp = {
-        "content": row["content"],
-        "created_at": row["created_at"],
-        "burn_after_read": False,
-        "expires_at": row["expires_at"],
-        "read_count": new_count,
-        "max_reads": max_reads,
-        "password_protected": is_password_protected,
-    }
-    if row["attachment_data"]:
-        resp["attachment_data"] = row["attachment_data"]
-        resp["attachment_meta"] = row["attachment_meta"]
-    return jsonify(resp)
+    return jsonify(_build_response(row, new_count, False))
 
 @app.route("/api/notes/<note_id>/exists", methods=["GET", "OPTIONS"])
 @limiter.limit("30/minute")
