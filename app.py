@@ -155,10 +155,8 @@ def read_note(note_id):
         "read_count": row["read_count"] + 1,
     }
 
-    # Burn after read: delete the note now that we've captured it
-    if row["burn_after_read"]:
-        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
-        db.commit()
+    # Burn after read: note stays until expires_at, then cleanup_expired() removes it.
+    # The client will show a countdown until the expiry time.
 
     return jsonify(result)
 
