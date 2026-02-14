@@ -57,16 +57,8 @@ def cleanup_expired():
 
 
 # ---------------------------------------------------------------------------
-# CORS & cleanup middleware
+# Request hooks
 # ---------------------------------------------------------------------------
-
-@app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    return response
-
 
 @app.before_request
 def before_request_hook():
