@@ -46,7 +46,7 @@ def init_db():
             max_reads     INTEGER NOT NULL DEFAULT 0,
             password_hash TEXT
         );
-
+        DROP TABLE IF EXISTS stats;
     """)
     # Migrate: add missing columns to existing tables
     cursor = conn.execute("PRAGMA table_info(notes)")
@@ -62,6 +62,8 @@ def init_db():
     conn.commit()
     conn.close()
 
+# NOTE: Not thread-safe; multiple threads/workers may run cleanup
+# concurrently, but cleanup_expired() is idempotent so this is harmless.
 _last_cleanup_time = 0
 _CLEANUP_INTERVAL = 60  # seconds
 
@@ -129,27 +131,33 @@ def read_note(note_id):
     if request.method == "OPTIONS":
         return "", 204
     db = get_db()
+    now = datetime.now(timezone.utc).isoformat()
 
-    # Try atomic burn-after-read first (DELETE ... RETURNING prevents race condition)
-    row = db.execute(
-        "DELETE FROM notes WHERE id = ? AND burn_after_read = 1 RETURNING *",
-        (note_id,),
-    ).fetchone()
-
-    if row is not None:
-        # Password check — if it fails, re-insert the note to undo the delete
-        if row["password_hash"]:
-            password = request.headers.get("X-Note-Password", "")
-            if not password or not check_password_hash(row["password_hash"], password):
-                db.execute(
-                    "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, attachment_data, attachment_meta) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (row["id"], row["content"], row["burn_after_read"], row["created_at"], row["expires_at"], row["read_count"], row["max_reads"], row["password_hash"], row["attachment_data"], row["attachment_meta"]),
-                )
-                db.commit()
-                return jsonify({"error": "password_required", "password_protected": True}), 403
+    row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+    if row is None:
+        return jsonify({"error": "Note not found or has expired"}), 404
+    # Reject expired notes
+    if row["expires_at"] <= now:
+        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
         db.commit()
-        is_password_protected = row["password_hash"] is not None
+        return jsonify({"error": "Note not found or has expired"}), 404
+    # Password check (before any destructive operation)
+    if row["password_hash"]:
+        password = request.headers.get("X-Note-Password", "")
+        if not password or not check_password_hash(row["password_hash"], password):
+            return jsonify({"error": "password_required", "password_protected": True}), 403
+    is_password_protected = row["password_hash"] is not None
+
+    # Burn-after-read: atomic DELETE to prevent race conditions
+    if row["burn_after_read"]:
+        deleted = db.execute(
+            "DELETE FROM notes WHERE id = ? AND burn_after_read = 1 RETURNING id",
+            (note_id,),
+        ).fetchone()
+        if deleted is None:
+            # Another request already consumed this note
+            return jsonify({"error": "Note not found or has expired"}), 404
+        db.commit()
         resp = {
             "content": row["content"],
             "created_at": row["created_at"],
@@ -163,17 +171,6 @@ def read_note(note_id):
             resp["attachment_data"] = row["attachment_data"]
             resp["attachment_meta"] = row["attachment_meta"]
         return jsonify(resp)
-
-    # Not a burn-after-read note — normal path
-    row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
-    if row is None:
-        return jsonify({"error": "Note not found or has expired"}), 404
-    # Password check
-    if row["password_hash"]:
-        password = request.headers.get("X-Note-Password", "")
-        if not password or not check_password_hash(row["password_hash"], password):
-            return jsonify({"error": "password_required", "password_protected": True}), 403
-    is_password_protected = row["password_hash"] is not None
     # Normal notes with max_reads
     max_reads = row["max_reads"]
     current_count = row["read_count"]
