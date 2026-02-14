@@ -1,6 +1,7 @@
 import os
 import uuid
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_limiter import Limiter
@@ -45,11 +46,7 @@ def init_db():
             max_reads     INTEGER NOT NULL DEFAULT 0,
             password_hash TEXT
         );
-        CREATE TABLE IF NOT EXISTS stats (
-            key   TEXT PRIMARY KEY,
-            value INTEGER NOT NULL DEFAULT 0
-        );
-        INSERT OR IGNORE INTO stats (key, value) VALUES ('total_notes_created', 0);
+        DROP TABLE IF EXISTS stats;
     """)
     # Migrate: add missing columns to existing tables
     cursor = conn.execute("PRAGMA table_info(notes)")
@@ -65,6 +62,11 @@ def init_db():
     conn.commit()
     conn.close()
 
+# NOTE: Not thread-safe; multiple threads/workers may run cleanup
+# concurrently, but cleanup_expired() is idempotent so this is harmless.
+_last_cleanup_time = 0
+_CLEANUP_INTERVAL = 60  # seconds
+
 def cleanup_expired():
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
@@ -73,7 +75,11 @@ def cleanup_expired():
 
 @app.before_request
 def before_request_hook():
-    cleanup_expired()
+    global _last_cleanup_time
+    now = time.monotonic()
+    if now - _last_cleanup_time >= _CLEANUP_INTERVAL:
+        _last_cleanup_time = now
+        cleanup_expired()
 
 @app.route("/")
 @app.route("/note/<path:path>")
@@ -91,6 +97,8 @@ def create_note():
     content = data.get("content")
     attachment_data = data.get("attachment_data")
     attachment_meta = data.get("attachment_meta")
+    if bool(attachment_data) != bool(attachment_meta):
+        return jsonify({"error": "attachment_data and attachment_meta must both be provided"}), 400
     if not content and not attachment_data:
         return jsonify({"error": "content or attachment is required"}), 400
     burn_after_read = bool(data.get("burn_after_read", False))
@@ -109,7 +117,6 @@ def create_note():
         "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
         (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, attachment_data, attachment_meta),
     )
-    db.execute("UPDATE stats SET value = value + 1 WHERE key = 'total_notes_created'")
     db.commit()
     base_url = request.host_url.rstrip("/")
     return jsonify({
@@ -124,18 +131,32 @@ def read_note(note_id):
     if request.method == "OPTIONS":
         return "", 204
     db = get_db()
+    now = datetime.now(timezone.utc).isoformat()
+
     row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
     if row is None:
         return jsonify({"error": "Note not found or has expired"}), 404
-    # Password check
+    # Reject expired notes
+    if row["expires_at"] <= now:
+        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        db.commit()
+        return jsonify({"error": "Note not found or has expired"}), 404
+    # Password check (before any destructive operation)
     if row["password_hash"]:
         password = request.headers.get("X-Note-Password", "")
         if not password or not check_password_hash(row["password_hash"], password):
             return jsonify({"error": "password_required", "password_protected": True}), 403
     is_password_protected = row["password_hash"] is not None
-    # Burn-after-read
+
+    # Burn-after-read: atomic DELETE to prevent race conditions
     if row["burn_after_read"]:
-        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        deleted = db.execute(
+            "DELETE FROM notes WHERE id = ? AND burn_after_read = 1 RETURNING id",
+            (note_id,),
+        ).fetchone()
+        if deleted is None:
+            # Another request already consumed this note
+            return jsonify({"error": "Note not found or has expired"}), 404
         db.commit()
         resp = {
             "content": row["content"],
@@ -190,17 +211,7 @@ def note_exists(note_id):
         "password_protected": row["password_hash"] is not None if row else False,
     })
 
-@app.route("/api/stats", methods=["GET", "OPTIONS"])
-def stats():
-    if request.method == "OPTIONS":
-        return "", 204
-    db = get_db()
-    total = db.execute("SELECT value FROM stats WHERE key = 'total_notes_created'").fetchone()
-    active = db.execute("SELECT COUNT(*) as cnt FROM notes").fetchone()
-    return jsonify({
-        "total_notes_created": total["value"] if total else 0,
-        "active_notes": active["cnt"] if active else 0,
-    })
+
 
 init_db()
 
