@@ -1,5 +1,5 @@
 [Unit]
-Description=BurNote - Self-Destructing Notes
+Description=Kemuri - Self-Destructing Encrypted Notes
 After=network.target
 
 [Service]
