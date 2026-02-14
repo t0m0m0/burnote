@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BurNote — Self-Destructing Notes</title>
+<title>BurNote — 読んだら消える秘密のメモ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -475,47 +475,47 @@ select:focus {
   <div class="header">
     <div class="logo">🔥</div>
     <h1>BurNote</h1>
-    <p>Share secrets that self-destruct. No trace left behind.</p>
+    <p>読んだら消える。痕跡を残さない秘密のメモ共有。</p>
   </div>
 
   <!-- CREATE VIEW -->
   <div id="createView">
     <div class="card">
-      <textarea id="noteContent" placeholder="Type your secret note here...
-It will be destroyed after reading."></textarea>
+      <textarea id="noteContent" placeholder="ここに秘密のメモを入力...
+読まれた後、自動的に消滅します。"></textarea>
       <div class="options">
         <div class="option-group">
           <input type="checkbox" class="toggle" id="burnToggle" checked>
-          <label for="burnToggle">🔥 Burn after reading</label>
+          <label for="burnToggle">🔥 既読で消滅</label>
         </div>
         <div class="option-group">
-          <label for="expiry">⏱ Expires in</label>
+          <label for="expiry">⏱ 有効期限</label>
           <select id="expiry">
-            <option value="5">5 min</option>
-            <option value="15">15 min</option>
-            <option value="60" selected>1 hour</option>
-            <option value="360">6 hours</option>
-            <option value="1440">24 hours</option>
+            <option value="5">5分</option>
+            <option value="15">15分</option>
+            <option value="60" selected>1時間</option>
+            <option value="360">6時間</option>
+            <option value="1440">24時間</option>
           </select>
         </div>
       </div>
       <button class="btn btn-primary" id="createBtn" onclick="createNote()">
-        🔒 Create Secret Note
+        🔒 秘密のメモを作成
       </button>
     </div>
 
     <!-- Result -->
     <div class="card result" id="resultCard">
-      <strong>✅ Note created!</strong>
-      <p style="font-size:13px; color:var(--text-dim); margin-top:4px;">Share this link — it can only be opened once.</p>
+      <strong>✅ メモを作成しました！</strong>
+      <p style="font-size:13px; color:var(--text-dim); margin-top:4px;">このリンクを共有してください — 一度しか開けません。</p>
       <div class="url-box">
         <input type="text" id="noteUrl" readonly>
-        <button class="btn-copy" id="copyBtn" onclick="copyUrl()">📋 Copy</button>
+        <button class="btn-copy" id="copyBtn" onclick="copyUrl()">📋 コピー</button>
       </div>
       <div class="burn-warning" id="burnWarning">
-        🔥 This note will be destroyed after the first read
+        🔥 このメモは最初の閲覧後に消滅します
       </div>
-      <a href="/" class="btn-new" style="display:inline-block; margin-top:16px;">+ Create another note</a>
+      <a href="/" class="btn-new" style="display:inline-block; margin-top:16px;">+ 新しいメモを作成</a>
     </div>
   </div>
 
@@ -523,44 +523,44 @@ It will be destroyed after reading."></textarea>
   <div id="readView" class="read-view">
     <div id="readLoading" class="card loading">
       <div class="spinner"></div>
-      <span>Decrypting note...</span>
+      <span>メモを復号中...</span>
     </div>
     <div id="readContent" class="card" style="display:none;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
         <span style="font-size:20px;">📄</span>
-        <strong>Secret Note</strong>
+        <strong>秘密のメモ</strong>
       </div>
       <div class="note-content" id="noteText"></div>
       <div class="meta" id="noteMeta"></div>
       <div class="destroyed-banner" id="destroyedBanner" style="display:none;">
-        🔥 This note has been permanently destroyed
+        🔥 このメモは完全に消滅しました
       </div>
-      <a href="/" class="btn-new">+ Create a new note</a>
+      <a href="/" class="btn-new">+ 新しいメモを作成</a>
     </div>
     <div id="readNotFound" class="card" style="display:none;">
       <div class="not-found">
         <div class="icon">💨</div>
-        <h2>Note not found</h2>
-        <p>This note has been destroyed or has expired.</p>
-        <a href="/" class="btn-new">+ Create a new note</a>
+        <h2>メモが見つかりません</h2>
+        <p>このメモは既に消滅したか、有効期限が切れています。</p>
+        <a href="/" class="btn-new">+ 新しいメモを作成</a>
       </div>
     </div>
   </div>
 
   <!-- Coffee / Tip -->
   <div class="coffee-section">
-    <p>Free & open. If this saved you time, consider a small tip ☕</p>
+    <p>無料で使えます。もし役に立ったら、応援お願いします ☕</p>
     <a class="btn-coffee" href="https://buymeacoffee.com" target="_blank" rel="noopener">
-      <span class="icon">☕</span> Buy me a coffee — $1
+      <span class="icon">☕</span> コーヒーをおごる — $1
     </a>
   </div>
 
   <div class="stats" id="statsBar">
-    <span id="totalNotes">—</span> notes created · <span id="activeNotes">—</span> active now
+    累計 <span id="totalNotes">—</span> 件作成 · 現在 <span id="activeNotes">—</span> 件アクティブ
   </div>
 
   <div class="footer">
-    Built with 🔥 by <a href="#">BurNote</a> · Your secret, your control
+    🔥 <a href="#">BurNote</a> · あなたの秘密を、あなたの手で
   </div>
 </div>
 
@@ -596,7 +596,7 @@ async function createNote() {
 
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Creating...';
+  btn.textContent = '⏳ 作成中...';
 
   try {
     const res = await fetch(API + '/api/notes', {
@@ -620,10 +620,10 @@ async function createNote() {
     document.getElementById('noteContent').value = '';
     loadStats();
   } catch (e) {
-    alert('Error: ' + e.message);
+    alert('エラー: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔒 Create Secret Note';
+    btn.textContent = '🔒 秘密のメモを作成';
   }
 }
 
@@ -631,10 +631,10 @@ function copyUrl() {
   const input = document.getElementById('noteUrl');
   navigator.clipboard.writeText(input.value).then(() => {
     const btn = document.getElementById('copyBtn');
-    btn.textContent = '✅ Copied!';
+    btn.textContent = '✅ コピーしました!';
     btn.classList.add('copied');
     setTimeout(() => {
-      btn.textContent = '📋 Copy';
+      btn.textContent = '📋 コピー';
       btn.classList.remove('copied');
     }, 2000);
   });
@@ -664,7 +664,7 @@ async function fetchNote(id) {
     const created = new Date(data.created_at).toLocaleString();
     const expires = new Date(data.expires_at).toLocaleString();
     document.getElementById('noteMeta').innerHTML =
-      `<span>📅 ${created}</span><span>⏱ Expires: ${expires}</span>`;
+      `<span>📅 ${created}</span><span>⏱ 有効期限: ${expires}</span>`;
 
     if (data.burn_after_read) {
       document.getElementById('destroyedBanner').style.display = 'block';
