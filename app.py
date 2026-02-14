@@ -205,21 +205,33 @@ def read_note(note_id):
             return jsonify({"error": "Note not found or has expired"}), 404
         db.commit()
         return jsonify(_build_response(row, 1, True))
-    # Normal notes with max_reads
+    # Normal notes with max_reads — atomic UPDATE to prevent TOCTOU race condition
     max_reads = row["max_reads"]
-    current_count = row["read_count"]
-    if max_reads > 0 and current_count >= max_reads:
-        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    if max_reads > 0:
+        # Atomically increment read_count only if still under the limit
+        updated = db.execute(
+            "UPDATE notes SET read_count = read_count + 1 "
+            "WHERE id = ? AND read_count < max_reads "
+            "RETURNING read_count, max_reads",
+            (note_id,),
+        ).fetchone()
+        if updated is None:
+            # Already at or over limit (or note gone) — delete and return 404
+            db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+            db.commit()
+            return jsonify({"error": "Note not found or has expired"}), 404
+        new_count = updated["read_count"]
+        # If we just hit the limit, delete the note
+        if new_count >= updated["max_reads"]:
+            db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
         db.commit()
-        return jsonify({"error": "Note not found or has expired"}), 404
-    new_count = current_count + 1
-    if max_reads > 0 and new_count >= max_reads:
-        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
-        db.commit()
+        return jsonify(_build_response(row, new_count, False))
     else:
+        # No read limit — just increment
         db.execute("UPDATE notes SET read_count = read_count + 1 WHERE id = ?", (note_id,))
         db.commit()
-    return jsonify(_build_response(row, new_count, False))
+        new_count = row["read_count"] + 1
+        return jsonify(_build_response(row, new_count, False))
 
 @app.route("/api/notes/<note_id>/exists", methods=["GET", "OPTIONS"])
 @limiter.limit("30/minute")
