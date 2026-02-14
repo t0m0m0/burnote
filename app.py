@@ -1,7 +1,7 @@
 import os
 import uuid
 import sqlite3
-import random
+import time
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_limiter import Limiter
@@ -46,11 +46,7 @@ def init_db():
             max_reads     INTEGER NOT NULL DEFAULT 0,
             password_hash TEXT
         );
-        CREATE TABLE IF NOT EXISTS stats (
-            key   TEXT PRIMARY KEY,
-            value INTEGER NOT NULL DEFAULT 0
-        );
-        INSERT OR IGNORE INTO stats (key, value) VALUES ('total_notes_created', 0);
+
     """)
     # Migrate: add missing columns to existing tables
     cursor = conn.execute("PRAGMA table_info(notes)")
@@ -66,6 +62,9 @@ def init_db():
     conn.commit()
     conn.close()
 
+_last_cleanup_time = 0
+_CLEANUP_INTERVAL = 60  # seconds
+
 def cleanup_expired():
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
@@ -74,7 +73,10 @@ def cleanup_expired():
 
 @app.before_request
 def before_request_hook():
-    if random.random() < 0.1:
+    global _last_cleanup_time
+    now = time.monotonic()
+    if now - _last_cleanup_time >= _CLEANUP_INTERVAL:
+        _last_cleanup_time = now
         cleanup_expired()
 
 @app.route("/")
@@ -113,7 +115,6 @@ def create_note():
         "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
         (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, attachment_data, attachment_meta),
     )
-    db.execute("UPDATE stats SET value = value + 1 WHERE key = 'total_notes_created'")
     db.commit()
     base_url = request.host_url.rstrip("/")
     return jsonify({
@@ -213,17 +214,7 @@ def note_exists(note_id):
         "password_protected": row["password_hash"] is not None if row else False,
     })
 
-@app.route("/api/stats", methods=["GET", "OPTIONS"])
-def stats():
-    if request.method == "OPTIONS":
-        return "", 204
-    db = get_db()
-    total = db.execute("SELECT value FROM stats WHERE key = 'total_notes_created'").fetchone()
-    active = db.execute("SELECT COUNT(*) as cnt FROM notes").fetchone()
-    return jsonify({
-        "total_notes_created": total["value"] if total else 0,
-        "active_notes": active["cnt"] if active else 0,
-    })
+
 
 init_db()
 
