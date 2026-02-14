@@ -3,8 +3,24 @@ import uuid
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, g
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__, static_folder="static")
+
+# ---------------------------------------------------------------------------
+# Rate limiting  (closes #4)
+# ---------------------------------------------------------------------------
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["100/minute"],
+    storage_uri="memory://",
+    strategy="fixed-window",
+)
+# NOTE: memory:// storage is per-worker. For accurate limiting with
+# multiple gunicorn workers, switch to Redis (storage_uri="redis://...").
+# With --workers 1 the current setup is exact.
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "burnote.db")
 
 # ---------------------------------------------------------------------------
@@ -80,6 +96,7 @@ def index(path=None):
 # ---------------------------------------------------------------------------
 
 @app.route("/api/notes", methods=["POST", "OPTIONS"])
+@limiter.limit("10/minute", methods=["POST"])
 def create_note():
     if request.method == "OPTIONS":
         return "", 204
@@ -115,6 +132,7 @@ def create_note():
 
 
 @app.route("/api/notes/<note_id>", methods=["GET", "OPTIONS"])
+@limiter.limit("30/minute")
 def read_note(note_id):
     if request.method == "OPTIONS":
         return "", 204
@@ -146,6 +164,7 @@ def read_note(note_id):
 
 
 @app.route("/api/notes/<note_id>/exists", methods=["GET", "OPTIONS"])
+@limiter.limit("30/minute")
 def note_exists(note_id):
     if request.method == "OPTIONS":
         return "", 204
