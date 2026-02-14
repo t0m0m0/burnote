@@ -9,7 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder="static", static_url_path="")
 app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024  # 15MB (encrypted file + base64 overhead)
 
 limiter = Limiter(
