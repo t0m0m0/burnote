@@ -1,6 +1,7 @@
 import os
 import uuid
 import sqlite3
+import random
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_from_directory, g
 from flask_limiter import Limiter
@@ -73,7 +74,8 @@ def cleanup_expired():
 
 @app.before_request
 def before_request_hook():
-    cleanup_expired()
+    if random.random() < 0.1:
+        cleanup_expired()
 
 @app.route("/")
 @app.route("/note/<path:path>")
@@ -91,6 +93,8 @@ def create_note():
     content = data.get("content")
     attachment_data = data.get("attachment_data")
     attachment_meta = data.get("attachment_meta")
+    if bool(attachment_data) != bool(attachment_meta):
+        return jsonify({"error": "attachment_data and attachment_meta must both be provided"}), 400
     if not content and not attachment_data:
         return jsonify({"error": "content or attachment is required"}), 400
     burn_after_read = bool(data.get("burn_after_read", False))
@@ -124,19 +128,27 @@ def read_note(note_id):
     if request.method == "OPTIONS":
         return "", 204
     db = get_db()
-    row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
-    if row is None:
-        return jsonify({"error": "Note not found or has expired"}), 404
-    # Password check
-    if row["password_hash"]:
-        password = request.headers.get("X-Note-Password", "")
-        if not password or not check_password_hash(row["password_hash"], password):
-            return jsonify({"error": "password_required", "password_protected": True}), 403
-    is_password_protected = row["password_hash"] is not None
-    # Burn-after-read
-    if row["burn_after_read"]:
-        db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+
+    # Try atomic burn-after-read first (DELETE ... RETURNING prevents race condition)
+    row = db.execute(
+        "DELETE FROM notes WHERE id = ? AND burn_after_read = 1 RETURNING *",
+        (note_id,),
+    ).fetchone()
+
+    if row is not None:
+        # Password check — if it fails, re-insert the note to undo the delete
+        if row["password_hash"]:
+            password = request.headers.get("X-Note-Password", "")
+            if not password or not check_password_hash(row["password_hash"], password):
+                db.execute(
+                    "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, attachment_data, attachment_meta) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (row["id"], row["content"], row["burn_after_read"], row["created_at"], row["expires_at"], row["read_count"], row["max_reads"], row["password_hash"], row["attachment_data"], row["attachment_meta"]),
+                )
+                db.commit()
+                return jsonify({"error": "password_required", "password_protected": True}), 403
         db.commit()
+        is_password_protected = row["password_hash"] is not None
         resp = {
             "content": row["content"],
             "created_at": row["created_at"],
@@ -150,6 +162,17 @@ def read_note(note_id):
             resp["attachment_data"] = row["attachment_data"]
             resp["attachment_meta"] = row["attachment_meta"]
         return jsonify(resp)
+
+    # Not a burn-after-read note — normal path
+    row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+    if row is None:
+        return jsonify({"error": "Note not found or has expired"}), 404
+    # Password check
+    if row["password_hash"]:
+        password = request.headers.get("X-Note-Password", "")
+        if not password or not check_password_hash(row["password_hash"], password):
+            return jsonify({"error": "password_required", "password_protected": True}), 403
+    is_password_protected = row["password_hash"] is not None
     # Normal notes with max_reads
     max_reads = row["max_reads"]
     current_count = row["read_count"]

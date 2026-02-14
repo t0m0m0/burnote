@@ -1078,6 +1078,7 @@ let currentNoteId = null;
 let currentKeyB64url = null;
 let selectedFile = null;
 let decryptedAttachment = null; // { blob, name, type }
+let activeObjectUrls = [];
 
 // ---------------------------------------------------------------------------
 // Router
@@ -1132,6 +1133,7 @@ async function createNote() {
       const progressBar = document.getElementById('uploadProgressBar');
       const progressText = document.getElementById('uploadProgressText');
       progressEl.style.display = 'block';
+      // Simulated progress (not actual bytes — crypto operations are not streaming)
       progressBar.style.width = '20%';
       progressText.textContent = 'ファイルを読み込み中...';
 
@@ -1317,14 +1319,19 @@ async function fetchNote(password) {
 
   const data = await res.json();
 
+  // Import decryption key once (reused for text + attachment)
+  let decryptionKey = null;
+  if (currentKeyB64url) {
+    decryptionKey = await importKeyFromBase64url(currentKeyB64url);
+  }
+
   // Decrypt text content
   let plaintext = '';
   if (!currentKeyB64url) {
     plaintext = '⚠️ 復号キーがURLに含まれていません。リンクが不完全です。';
   } else if (data.content) {
     try {
-      const key = await importKeyFromBase64url(currentKeyB64url);
-      plaintext = await decryptContent(data.content, key);
+      plaintext = await decryptContent(data.content, decryptionKey);
     } catch (decryptErr) {
       plaintext = '⚠️ 復号に失敗しました。キーが正しくないか、データが破損しています。';
     }
@@ -1345,21 +1352,25 @@ async function fetchNote(password) {
     if (textHeader) textHeader.style.display = 'none';
   }
 
+  // Clean up previous object URLs
+  activeObjectUrls.forEach(u => URL.revokeObjectURL(u));
+  activeObjectUrls = [];
+
   // Decrypt and display attachment
   const attachmentView = document.getElementById('attachmentView');
   if (data.attachment_data && currentKeyB64url) {
     try {
-      const key2 = await importKeyFromBase64url(currentKeyB64url);
-      const metaJson = await decryptContent(data.attachment_meta, key2);
+      const metaJson = await decryptContent(data.attachment_meta, decryptionKey);
       const meta = JSON.parse(metaJson);
 
-      const decryptedBuf = await decryptBinary(data.attachment_data, key2);
+      const decryptedBuf = await decryptBinary(data.attachment_data, decryptionKey);
       const blob = new Blob([decryptedBuf], { type: meta.type });
       decryptedAttachment = { blob, name: meta.name, type: meta.type };
 
       const previewEl = document.getElementById('attachmentPreview');
       previewEl.innerHTML = '';
       const objUrl = URL.createObjectURL(blob);
+      activeObjectUrls.push(objUrl);
 
       if (meta.type.startsWith('image/')) {
         const img = document.createElement('img');
@@ -1387,7 +1398,21 @@ async function fetchNote(password) {
         embed.style.borderRadius = '8px';
         previewEl.appendChild(embed);
       } else {
-        previewEl.innerHTML = `<div style="padding:1rem;"><span style="font-size:2rem;">📄</span><div style="margin-top:0.5rem; font-size:0.9rem;">${meta.name}</div><div style="font-size:0.78rem; color:var(--text-dim);">${formatFileSizeRead(meta.size)} ・ ${meta.type || '不明'}</div></div>`;
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.style.padding = '1rem';
+        const iconSpan = document.createElement('span');
+        iconSpan.style.fontSize = '2rem';
+        iconSpan.textContent = '📄';
+        fallbackDiv.appendChild(iconSpan);
+        const nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'margin-top:0.5rem; font-size:0.9rem;';
+        nameDiv.textContent = meta.name;
+        fallbackDiv.appendChild(nameDiv);
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = 'font-size:0.78rem; color:var(--text-dim);';
+        infoDiv.textContent = formatFileSize(meta.size) + ' ・ ' + (meta.type || '不明');
+        fallbackDiv.appendChild(infoDiv);
+        previewEl.appendChild(fallbackDiv);
       }
 
       document.getElementById('downloadBtn').textContent = `📥 ${meta.name} をダウンロード`;
@@ -1531,7 +1556,6 @@ function formatFileSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-const formatFileSizeRead = formatFileSize;
 
 function handleFileSelect(file) {
   document.getElementById('fileSizeError').style.display = 'none';
