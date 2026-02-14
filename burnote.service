@@ -1,0 +1,15 @@
+[Unit]
+Description=BurNote - Self-Destructing Notes
+After=network.target
+
+[Service]
+Type=simple
+User=exedev
+WorkingDirectory=/home/exedev/burnote
+ExecStart=/usr/bin/python3 /home/exedev/burnote/app.py
+Restart=always
+RestartSec=3
+Environment=FLASK_ENV=production
+
+[Install]
+WantedBy=multi-user.target

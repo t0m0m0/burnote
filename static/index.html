@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BurNote — Self-Destructing Notes</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1a1a25;
+  --border: #2a2a3a;
+  --text: #e8e8f0;
+  --text-dim: #8888aa;
+  --accent: #ff6b35;
+  --accent2: #ff8f5e;
+  --danger: #ff4444;
+  --success: #44cc88;
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated background */
+.bg-glow {
+  position: fixed;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(255,107,53,0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(255,68,68,0.04) 0%, transparent 50%);
+  animation: bgShift 20s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes bgShift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-5%, -3%); }
+}
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+  display: inline-block;
+  animation: flame 2s ease-in-out infinite;
+}
+
+@keyframes flame {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+  50% { transform: scale(1.1) rotate(3deg); filter: brightness(1.3); }
+}
+
+.header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--accent), var(--danger));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header p {
+  color: var(--text-dim);
+  font-size: 15px;
+  margin-top: 6px;
+  font-weight: 300;
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(255,107,53,0.3);
+}
+
+/* Form */
+textarea {
+  width: 100%;
+  min-height: 160px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.3s;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+}
+
+textarea::placeholder {
+  color: var(--text-dim);
+}
+
+.options {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.option-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option-group label {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.toggle {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  background: var(--border);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--text);
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle:checked {
+  background: var(--accent);
+}
+
+.toggle:checked::after {
+  transform: translateX(20px);
+}
+
+select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 16px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #e55a28);
+  color: white;
+  box-shadow: 0 4px 20px rgba(255,107,53,0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(255,107,53,0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Result */
+.result {
+  display: none;
+  animation: slideIn 0.5s ease;
+}
+
+.result.show { display: block; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.url-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+.url-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--accent2);
+  font-family: monospace;
+  font-size: 13px;
+  outline: none;
+}
+
+.btn-copy {
+  padding: 8px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-copy:hover { background: var(--accent2); }
+.btn-copy.copied { background: var(--success); }
+
+.burn-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(255,68,68,0.1);
+  border: 1px solid rgba(255,68,68,0.2);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+/* Read Note View */
+.read-view {
+  display: none;
+}
+
+.read-view.show { display: block; }
+
+.note-content {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.7;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.destroyed-banner {
+  text-align: center;
+  padding: 16px;
+  background: rgba(255,68,68,0.1);
+  border: 1px solid rgba(255,68,68,0.2);
+  border-radius: 8px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--danger);
+  animation: pulse 2s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.not-found {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.not-found .icon { font-size: 64px; margin-bottom: 16px; }
+.not-found h2 { font-size: 22px; margin-bottom: 8px; }
+.not-found p { color: var(--text-dim); font-size: 14px; }
+
+.btn-new {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 24px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-new:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Coffee button */
+.coffee-section {
+  text-align: center;
+  margin-top: 40px;
+  padding: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.coffee-section p {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.btn-coffee {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #FFDD00, #FBB034);
+  border: none;
+  border-radius: 30px;
+  color: #1a1a1a;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(251,176,52,0.3);
+}
+
+.btn-coffee:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 30px rgba(251,176,52,0.4);
+}
+
+.btn-coffee .icon { font-size: 20px; }
+
+/* Stats */
+.stats {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.stats span { color: var(--accent); font-weight: 600; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  padding: 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.footer a { color: var(--accent); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px;
+  color: var(--text-dim);
+}
+
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container { padding: 20px 16px; }
+  .header h1 { font-size: 26px; }
+  .options { flex-direction: column; gap: 12px; }
+  .url-box { flex-direction: column; }
+  .url-box input { width: 100%; text-align: center; }
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="logo">🔥</div>
+    <h1>BurNote</h1>
+    <p>Share secrets that self-destruct. No trace left behind.</p>
+  </div>
+
+  <!-- CREATE VIEW -->
+  <div id="createView">
+    <div class="card">
+      <textarea id="noteContent" placeholder="Type your secret note here...
+It will be destroyed after reading."></textarea>
+      <div class="options">
+        <div class="option-group">
+          <input type="checkbox" class="toggle" id="burnToggle" checked>
+          <label for="burnToggle">🔥 Burn after reading</label>
+        </div>
+        <div class="option-group">
+          <label for="expiry">⏱ Expires in</label>
+          <select id="expiry">
+            <option value="5">5 min</option>
+            <option value="15">15 min</option>
+            <option value="60" selected>1 hour</option>
+            <option value="360">6 hours</option>
+            <option value="1440">24 hours</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="createBtn" onclick="createNote()">
+        🔒 Create Secret Note
+      </button>
+    </div>
+
+    <!-- Result -->
+    <div class="card result" id="resultCard">
+      <strong>✅ Note created!</strong>
+      <p style="font-size:13px; color:var(--text-dim); margin-top:4px;">Share this link — it can only be opened once.</p>
+      <div class="url-box">
+        <input type="text" id="noteUrl" readonly>
+        <button class="btn-copy" id="copyBtn" onclick="copyUrl()">📋 Copy</button>
+      </div>
+      <div class="burn-warning" id="burnWarning">
+        🔥 This note will be destroyed after the first read
+      </div>
+      <a href="/" class="btn-new" style="display:inline-block; margin-top:16px;">+ Create another note</a>
+    </div>
+  </div>
+
+  <!-- READ VIEW -->
+  <div id="readView" class="read-view">
+    <div id="readLoading" class="card loading">
+      <div class="spinner"></div>
+      <span>Decrypting note...</span>
+    </div>
+    <div id="readContent" class="card" style="display:none;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+        <span style="font-size:20px;">📄</span>
+        <strong>Secret Note</strong>
+      </div>
+      <div class="note-content" id="noteText"></div>
+      <div class="meta" id="noteMeta"></div>
+      <div class="destroyed-banner" id="destroyedBanner" style="display:none;">
+        🔥 This note has been permanently destroyed
+      </div>
+      <a href="/" class="btn-new">+ Create a new note</a>
+    </div>
+    <div id="readNotFound" class="card" style="display:none;">
+      <div class="not-found">
+        <div class="icon">💨</div>
+        <h2>Note not found</h2>
+        <p>This note has been destroyed or has expired.</p>
+        <a href="/" class="btn-new">+ Create a new note</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coffee / Tip -->
+  <div class="coffee-section">
+    <p>Free & open. If this saved you time, consider a small tip ☕</p>
+    <a class="btn-coffee" href="https://buymeacoffee.com" target="_blank" rel="noopener">
+      <span class="icon">☕</span> Buy me a coffee — $1
+    </a>
+  </div>
+
+  <div class="stats" id="statsBar">
+    <span id="totalNotes">—</span> notes created · <span id="activeNotes">—</span> active now
+  </div>
+
+  <div class="footer">
+    Built with 🔥 by <a href="#">BurNote</a> · Your secret, your control
+  </div>
+</div>
+
+<script>
+const API = '';
+
+// Router
+function init() {
+  const path = window.location.pathname;
+  const match = path.match(/^\/note\/([a-f0-9]+)$/);
+  if (match) {
+    showReadView(match[1]);
+  } else {
+    showCreateView();
+  }
+  loadStats();
+}
+
+function showCreateView() {
+  document.getElementById('createView').style.display = 'block';
+  document.getElementById('readView').classList.remove('show');
+}
+
+function showReadView(noteId) {
+  document.getElementById('createView').style.display = 'none';
+  document.getElementById('readView').classList.add('show');
+  fetchNote(noteId);
+}
+
+async function createNote() {
+  const content = document.getElementById('noteContent').value.trim();
+  if (!content) { document.getElementById('noteContent').focus(); return; }
+
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Creating...';
+
+  try {
+    const res = await fetch(API + '/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+        burn_after_read: document.getElementById('burnToggle').checked,
+        expires_minutes: parseInt(document.getElementById('expiry').value)
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    // Build URL using current origin
+    const noteUrl = window.location.origin + '/note/' + data.id;
+    document.getElementById('noteUrl').value = noteUrl;
+    document.getElementById('burnWarning').style.display =
+      document.getElementById('burnToggle').checked ? 'flex' : 'none';
+    document.getElementById('resultCard').classList.add('show');
+    document.getElementById('noteContent').value = '';
+    loadStats();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔒 Create Secret Note';
+  }
+}
+
+function copyUrl() {
+  const input = document.getElementById('noteUrl');
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+async function fetchNote(id) {
+  document.getElementById('readLoading').style.display = 'flex';
+  document.getElementById('readContent').style.display = 'none';
+  document.getElementById('readNotFound').style.display = 'none';
+
+  try {
+    // Artificial delay for drama
+    await new Promise(r => setTimeout(r, 800));
+
+    const res = await fetch(API + '/api/notes/' + id);
+    if (!res.ok) {
+      document.getElementById('readLoading').style.display = 'none';
+      document.getElementById('readNotFound').style.display = 'block';
+      return;
+    }
+
+    const data = await res.json();
+    document.getElementById('readLoading').style.display = 'none';
+    document.getElementById('readContent').style.display = 'block';
+    document.getElementById('noteText').textContent = data.content;
+
+    const created = new Date(data.created_at).toLocaleString();
+    const expires = new Date(data.expires_at).toLocaleString();
+    document.getElementById('noteMeta').innerHTML =
+      `<span>📅 ${created}</span><span>⏱ Expires: ${expires}</span>`;
+
+    if (data.burn_after_read) {
+      document.getElementById('destroyedBanner').style.display = 'block';
+    }
+  } catch (e) {
+    document.getElementById('readLoading').style.display = 'none';
+    document.getElementById('readNotFound').style.display = 'block';
+  }
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch(API + '/api/stats');
+    const data = await res.json();
+    document.getElementById('totalNotes').textContent = data.total_notes_created;
+    document.getElementById('activeNotes').textContent = data.active_notes;
+  } catch (e) {}
+}
+
+// Client-side routing for /note/<id>
+window.addEventListener('popstate', init);
+init();
+</script>
+</body>
+</html>
