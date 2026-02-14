@@ -745,6 +745,24 @@ input[type="password"]::placeholder {
   }
 }
 
+#dropZone.drag-over {
+  border-color: var(--accent) !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.15);
+}
+
+#attachmentPreview img,
+#attachmentPreview video,
+#attachmentPreview audio {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+}
+
+#attachmentPreview video {
+  width: 100%;
+}
+
 @media (max-width: 480px) {
   .container {
     padding: 1.25rem 1rem 2rem;
@@ -860,6 +878,34 @@ input[type="password"]::placeholder {
           <input type="password" id="notePassword" placeholder="未設定">
         </div>
       </div>
+      <!-- Attachment area -->
+      <div id="attachmentArea" style="margin-top:1rem;">
+        <label style="font-size:0.8rem; font-weight:500; color:var(--text-dim); letter-spacing:0.02em; display:block; margin-bottom:0.4rem;">📎 ファイル添付（任意・最大10MB）</label>
+        <div id="dropZone" style="border:2px dashed var(--border); border-radius:var(--radius); padding:1.5rem; text-align:center; cursor:pointer; transition:all 0.25s ease; background:var(--surface2);">
+          <div id="dropZoneContent">
+            <div style="font-size:1.5rem; margin-bottom:0.25rem;">📎</div>
+            <div style="font-size:0.85rem; color:var(--text-dim);">クリックまたはドラッグ＆ドロップでファイルを添付</div>
+          </div>
+          <div id="filePreview" style="display:none;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+              <img id="fileThumb" style="display:none; max-width:120px; max-height:80px; border-radius:6px; object-fit:cover;">
+              <div style="text-align:left;">
+                <div id="fileName" style="font-size:0.9rem; font-weight:500;"></div>
+                <div id="fileSize" style="font-size:0.78rem; color:var(--text-dim);"></div>
+              </div>
+              <button type="button" id="fileRemoveBtn" onclick="removeAttachment(event)" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:var(--danger); border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem; font-family:Inter,sans-serif;">✕ 削除</button>
+            </div>
+          </div>
+          <input type="file" id="fileInput" style="display:none;">
+        </div>
+        <div id="fileSizeError" style="display:none; color:var(--danger); font-size:0.82rem; margin-top:0.4rem;">⚠️ ファイルサイズが10MBを超えています。</div>
+        <div id="uploadProgress" style="display:none; margin-top:0.5rem;">
+          <div style="height:4px; background:var(--surface2); border-radius:2px; overflow:hidden;">
+            <div id="uploadProgressBar" style="height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); border-radius:2px; width:0%; transition:width 0.3s ease;"></div>
+          </div>
+          <div id="uploadProgressText" style="font-size:0.78rem; color:var(--text-dim); margin-top:0.25rem; text-align:center;">暗号化中...</div>
+        </div>
+      </div>
       <button class="btn btn-primary" id="createBtn" onclick="createNote()" style="margin-top:1rem;">
         🔒 秘密のメモを作成
       </button>
@@ -898,6 +944,16 @@ input[type="password"]::placeholder {
           <strong>秘密のメモ</strong>
         </div>
         <div class="note-content" id="noteText"></div>
+        <div id="attachmentView" style="display:none; margin-top:1rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
+            <span style="font-size:1rem;">📎</span>
+            <strong style="font-size:0.9rem;">添付ファイル</strong>
+          </div>
+          <div id="attachmentPreview" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; text-align:center;"></div>
+          <div style="text-align:center; margin-top:0.75rem;">
+            <button class="btn" id="downloadBtn" onclick="downloadAttachment()" style="width:auto; padding:0 1.5rem;">📥 ダウンロード</button>
+          </div>
+        </div>
         <div class="meta" id="noteMeta"></div>
       </div>
       <div id="ashesState" class="ashes-state" style="display:none;">
@@ -998,10 +1054,30 @@ async function decryptContent(b64data, key) {
 }
 
 // ---------------------------------------------------------------------------
+// E2EE: Binary encrypt/decrypt for file attachments
+// ---------------------------------------------------------------------------
+async function encryptBinary(arrayBuffer, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, arrayBuffer);
+  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+  return arrayBufToBase64(combined.buffer);
+}
+async function decryptBinary(b64data, key) {
+  const combined = new Uint8Array(base64ToArrayBuf(b64data));
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  return await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+}
+
+// ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 let currentNoteId = null;
 let currentKeyB64url = null;
+let selectedFile = null;
+let decryptedAttachment = null; // { blob, name, type }
 
 // ---------------------------------------------------------------------------
 // Router
@@ -1035,7 +1111,7 @@ function showReadView() {
 // ---------------------------------------------------------------------------
 async function createNote() {
   const content = document.getElementById('noteContent').value.trim();
-  if (!content) { document.getElementById('noteContent').focus(); return; }
+  if (!content && !selectedFile) { document.getElementById('noteContent').focus(); return; }
 
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
@@ -1043,23 +1119,55 @@ async function createNote() {
 
   try {
     const key = await generateEncryptionKey();
-    const encrypted = await encryptContent(content, key);
     const keyB64url = await exportKeyToBase64url(key);
+
+    // Encrypt text (if any)
+    const encrypted = content ? await encryptContent(content, key) : '';
+
+    // Encrypt file attachment (if any)
+    let encAttachmentData = undefined;
+    let encAttachmentMeta = undefined;
+    if (selectedFile) {
+      const progressEl = document.getElementById('uploadProgress');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const progressText = document.getElementById('uploadProgressText');
+      progressEl.style.display = 'block';
+      progressBar.style.width = '20%';
+      progressText.textContent = 'ファイルを読み込み中...';
+
+      const fileBuf = await selectedFile.arrayBuffer();
+      progressBar.style.width = '50%';
+      progressText.textContent = '暗号化中...';
+
+      encAttachmentData = await encryptBinary(fileBuf, key);
+      progressBar.style.width = '80%';
+
+      const meta = JSON.stringify({ name: selectedFile.name, type: selectedFile.type, size: selectedFile.size });
+      encAttachmentMeta = await encryptContent(meta, key);
+      progressBar.style.width = '100%';
+      progressText.textContent = '送信中...';
+    }
 
     const burnToggle = document.getElementById('burnToggle').checked;
     const maxReads = parseInt(document.getElementById('maxReads').value);
     const password = document.getElementById('notePassword').value || undefined;
 
+    const body = {
+      content: encrypted,
+      burn_after_read: burnToggle,
+      expires_minutes: parseInt(document.getElementById('expiry').value),
+      max_reads: burnToggle ? 0 : maxReads,
+      password: password,
+    };
+    if (encAttachmentData) {
+      body.attachment_data = encAttachmentData;
+      body.attachment_meta = encAttachmentMeta;
+    }
+
     const res = await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: encrypted,
-        burn_after_read: burnToggle,
-        expires_minutes: parseInt(document.getElementById('expiry').value),
-        max_reads: burnToggle ? 0 : maxReads,
-        password: password,
-      })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
@@ -1092,11 +1200,14 @@ async function createNote() {
 
     document.getElementById('resultCard').classList.add('show');
     document.getElementById('noteContent').value = '';
+    removeAttachment(null);
+    document.getElementById('uploadProgress').style.display = 'none';
   } catch (e) {
     alert('エラー: ' + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = '🔒 秘密のメモを作成';
+    document.getElementById('uploadProgress').style.display = 'none';
   }
 }
 
@@ -1206,11 +1317,11 @@ async function fetchNote(password) {
 
   const data = await res.json();
 
-  // Decrypt
-  let plaintext;
+  // Decrypt text content
+  let plaintext = '';
   if (!currentKeyB64url) {
     plaintext = '⚠️ 復号キーがURLに含まれていません。リンクが不完全です。';
-  } else {
+  } else if (data.content) {
     try {
       const key = await importKeyFromBase64url(currentKeyB64url);
       plaintext = await decryptContent(data.content, key);
@@ -1221,7 +1332,73 @@ async function fetchNote(password) {
 
   document.getElementById('readLoading').style.display = 'none';
   document.getElementById('readContent').style.display = 'block';
-  document.getElementById('noteText').textContent = plaintext;
+
+  // Show/hide text content
+  const noteTextEl = document.getElementById('noteText');
+  const textHeader = noteTextEl.previousElementSibling; // the header div
+  if (plaintext) {
+    noteTextEl.textContent = plaintext;
+    noteTextEl.style.display = 'block';
+    if (textHeader) textHeader.style.display = 'flex';
+  } else {
+    noteTextEl.style.display = 'none';
+    if (textHeader) textHeader.style.display = 'none';
+  }
+
+  // Decrypt and display attachment
+  const attachmentView = document.getElementById('attachmentView');
+  if (data.attachment_data && currentKeyB64url) {
+    try {
+      const key2 = await importKeyFromBase64url(currentKeyB64url);
+      const metaJson = await decryptContent(data.attachment_meta, key2);
+      const meta = JSON.parse(metaJson);
+
+      const decryptedBuf = await decryptBinary(data.attachment_data, key2);
+      const blob = new Blob([decryptedBuf], { type: meta.type });
+      decryptedAttachment = { blob, name: meta.name, type: meta.type };
+
+      const previewEl = document.getElementById('attachmentPreview');
+      previewEl.innerHTML = '';
+      const objUrl = URL.createObjectURL(blob);
+
+      if (meta.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = objUrl;
+        img.alt = meta.name;
+        previewEl.appendChild(img);
+      } else if (meta.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.src = objUrl;
+        video.controls = true;
+        video.style.maxWidth = '100%';
+        previewEl.appendChild(video);
+      } else if (meta.type.startsWith('audio/')) {
+        const audio = document.createElement('audio');
+        audio.src = objUrl;
+        audio.controls = true;
+        audio.style.width = '100%';
+        previewEl.appendChild(audio);
+      } else if (meta.type === 'application/pdf') {
+        const embed = document.createElement('embed');
+        embed.src = objUrl;
+        embed.type = 'application/pdf';
+        embed.style.width = '100%';
+        embed.style.height = '500px';
+        embed.style.borderRadius = '8px';
+        previewEl.appendChild(embed);
+      } else {
+        previewEl.innerHTML = `<div style="padding:1rem;"><span style="font-size:2rem;">📄</span><div style="margin-top:0.5rem; font-size:0.9rem;">${meta.name}</div><div style="font-size:0.78rem; color:var(--text-dim);">${formatFileSizeRead(meta.size)} ・ ${meta.type || '不明'}</div></div>`;
+      }
+
+      document.getElementById('downloadBtn').textContent = `📥 ${meta.name} をダウンロード`;
+      attachmentView.style.display = 'block';
+    } catch (attachErr) {
+      console.error('Attachment decrypt error:', attachErr);
+      attachmentView.style.display = 'none';
+    }
+  } else {
+    attachmentView.style.display = 'none';
+  }
 
   // Meta info
   const created = new Date(data.created_at).toLocaleString('ja-JP');
@@ -1320,6 +1497,90 @@ document.getElementById('burnToggle').addEventListener('change', function() {
 // Initialize on load
 document.getElementById('burnToggle').dispatchEvent(new Event('change'));
 
+// ---------------------------------------------------------------------------
+// File attachment: drag & drop / click to select
+// ---------------------------------------------------------------------------
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+function setupFileAttachment() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  if (!dropZone || !fileInput) return;
+
+  dropZone.addEventListener('click', (e) => {
+    if (e.target.id === 'fileRemoveBtn' || e.target.closest('#fileRemoveBtn')) return;
+    if (selectedFile) return;
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleFileSelect(e.target.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+  });
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+const formatFileSizeRead = formatFileSize;
+
+function handleFileSelect(file) {
+  document.getElementById('fileSizeError').style.display = 'none';
+  if (file.size > MAX_FILE_SIZE) {
+    document.getElementById('fileSizeError').style.display = 'block';
+    return;
+  }
+  selectedFile = file;
+  document.getElementById('dropZoneContent').style.display = 'none';
+  document.getElementById('filePreview').style.display = 'block';
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatFileSize(file.size);
+
+  const thumb = document.getElementById('fileThumb');
+  if (file.type.startsWith('image/')) {
+    thumb.src = URL.createObjectURL(file);
+    thumb.style.display = 'block';
+  } else {
+    thumb.style.display = 'none';
+  }
+}
+
+function removeAttachment(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  selectedFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('filePreview').style.display = 'none';
+  document.getElementById('dropZoneContent').style.display = 'block';
+  document.getElementById('fileSizeError').style.display = 'none';
+  const thumb = document.getElementById('fileThumb');
+  if (thumb.src) { URL.revokeObjectURL(thumb.src); thumb.src = ''; }
+}
+
+// ---------------------------------------------------------------------------
+// Download decrypted attachment
+// ---------------------------------------------------------------------------
+function downloadAttachment() {
+  if (!decryptedAttachment) return;
+  const url = URL.createObjectURL(decryptedAttachment.blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = decryptedAttachment.name || 'attachment';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+setupFileAttachment();
 window.addEventListener('popstate', init);
 init();
 </script>
