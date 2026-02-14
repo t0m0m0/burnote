@@ -233,19 +233,6 @@ def read_note(note_id):
         new_count = row["read_count"] + 1
         return jsonify(_build_response(row, new_count, False))
 
-@app.route("/api/notes/<note_id>/exists", methods=["GET", "OPTIONS"])
-@limiter.limit("30/minute")
-def note_exists(note_id):
-    if request.method == "OPTIONS":
-        return "", 204
-    db = get_db()
-    row = db.execute("SELECT id, password_hash FROM notes WHERE id = ?", (note_id,)).fetchone()
-    return jsonify({
-        "exists": row is not None,
-        "password_protected": row["password_hash"] is not None if row else False,
-    })
-
-
 
 init_db()
 
