@@ -32,7 +32,7 @@ def init_db():
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS notes (
             id            TEXT PRIMARY KEY,
-            content       TEXT NOT NULL,
+            content       TEXT NOT NULL,  -- stores base64(iv+ciphertext), never plaintext
             burn_after_read INTEGER NOT NULL DEFAULT 0,
             created_at    TEXT NOT NULL,
             expires_at    TEXT NOT NULL,
