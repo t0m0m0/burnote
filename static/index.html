@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
 <title>BurNote — 読んだら消える秘密のメモ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
 <style>
@@ -632,7 +633,7 @@ select:focus {
   <div id="readView" class="read-view">
     <div id="readLoading" class="card loading">
       <div class="spinner"></div>
-      <span>メモを復号中...</span>
+      <span>復号中...</span>
     </div>
     <div id="readContent" class="card" style="display:none;">
       <div id="readNoteInner">
@@ -680,7 +681,89 @@ select:focus {
 <script>
 const API = '';
 
+// ---------------------------------------------------------------------------
+// E2EE: AES-256-GCM via Web Crypto API
+// Key is stored in URL fragment (#) — never sent to server.
+// Server only sees base64(iv || ciphertext).
+// ---------------------------------------------------------------------------
+
+function arrayBufToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function base64ToArrayBuf(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+// Base64url (URL-safe, no padding) for the key in the fragment
+function arrayBufToBase64url(buf) {
+  return arrayBufToBase64(buf).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64urlToArrayBuf(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return base64ToArrayBuf(s);
+}
+
+function requireCryptoSubtle() {
+  if (!crypto || !crypto.subtle) {
+    throw new Error('Web Crypto API が利用できません。HTTPS 環境でアクセスしてください。');
+  }
+}
+
+async function generateEncryptionKey() {
+  requireCryptoSubtle();
+  return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+async function exportKeyToBase64url(key) {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  return arrayBufToBase64url(raw);
+}
+
+async function importKeyFromBase64url(b64url) {
+  const raw = base64urlToArrayBuf(b64url);
+  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['decrypt']);
+}
+
+async function encryptContent(plaintext, key) {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(plaintext)
+  );
+  // Concatenate iv (12 bytes) + ciphertext, then base64
+  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+  return arrayBufToBase64(combined.buffer);
+}
+
+async function decryptContent(b64data, key) {
+  const combined = new Uint8Array(base64ToArrayBuf(b64data));
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+  return new TextDecoder().decode(plainBuf);
+}
+
+// ---------------------------------------------------------------------------
 // Router
+// ---------------------------------------------------------------------------
+
 function init() {
   const path = window.location.pathname;
   const match = path.match(/^\/note\/([a-f0-9]+)$/);
@@ -702,20 +785,30 @@ function showReadView(noteId) {
   fetchNote(noteId);
 }
 
+// ---------------------------------------------------------------------------
+// Create note (encrypt client-side, send ciphertext to server)
+// ---------------------------------------------------------------------------
+
 async function createNote() {
   const content = document.getElementById('noteContent').value.trim();
   if (!content) { document.getElementById('noteContent').focus(); return; }
 
   const btn = document.getElementById('createBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ 作成中...';
+  btn.textContent = '⏳ 暗号化 & 作成中...';
 
   try {
+    // 1. Generate AES-256-GCM key & encrypt
+    const key = await generateEncryptionKey();
+    const encrypted = await encryptContent(content, key);
+    const keyB64url = await exportKeyToBase64url(key);
+
+    // 2. Send ciphertext to server
     const res = await fetch(API + '/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content,
+        content: encrypted,  // server only sees ciphertext
         burn_after_read: document.getElementById('burnToggle').checked,
         expires_minutes: parseInt(document.getElementById('expiry').value)
       })
@@ -723,8 +816,8 @@ async function createNote() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    // Build URL using current origin
-    const noteUrl = window.location.origin + '/note/' + data.id;
+    // 3. Build URL with key in fragment (never sent to server)
+    const noteUrl = window.location.origin + '/note/' + data.id + '#' + keyB64url;
     document.getElementById('noteUrl').value = noteUrl;
     document.getElementById('burnWarning').style.display =
       document.getElementById('burnToggle').checked ? 'flex' : 'none';
@@ -737,6 +830,10 @@ async function createNote() {
     btn.textContent = '🔒 秘密のメモを作成';
   }
 }
+
+// ---------------------------------------------------------------------------
+// Copy URL
+// ---------------------------------------------------------------------------
 
 function copyUrl() {
   const input = document.getElementById('noteUrl');
@@ -751,12 +848,19 @@ function copyUrl() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Read note (fetch ciphertext, decrypt client-side)
+// ---------------------------------------------------------------------------
+
 async function fetchNote(id) {
   document.getElementById('readLoading').style.display = 'flex';
   document.getElementById('readContent').style.display = 'none';
   document.getElementById('readNotFound').style.display = 'none';
   document.getElementById('readNoteInner').style.display = 'block';
   document.getElementById('ashesState').style.display = 'none';
+
+  // Extract decryption key from URL fragment
+  const keyB64url = window.location.hash.slice(1); // remove '#'
 
   try {
     await new Promise(r => setTimeout(r, 800));
@@ -769,14 +873,33 @@ async function fetchNote(id) {
     }
 
     const data = await res.json();
+
+    // Decrypt
+    let plaintext;
+    if (!keyB64url) {
+      plaintext = '⚠️ 復号キーがURLに含まれていません。リンクが不完全です。';
+    } else {
+      try {
+        const key = await importKeyFromBase64url(keyB64url);
+        plaintext = await decryptContent(data.content, key);
+      } catch (decryptErr) {
+        plaintext = '⚠️ 復号に失敗しました。キーが正しくないか、データが破損しています。';
+      }
+    }
+
     document.getElementById('readLoading').style.display = 'none';
     document.getElementById('readContent').style.display = 'block';
-    document.getElementById('noteText').textContent = data.content;
+    document.getElementById('noteText').textContent = plaintext;
 
     const created = new Date(data.created_at).toLocaleString();
     const expires = new Date(data.expires_at).toLocaleString();
     document.getElementById('noteMeta').innerHTML =
-      `<span>📅 ${created}</span><span>⏱ 有効期限: ${expires}</span>`;
+      `<span>🔐 E2E暗号化済</span><span>📅 ${created}</span><span>⏱ 有効期限: ${expires}</span>`;
+
+    // Remove encryption key from URL / browser history
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
 
     if (data.burn_after_read) {
       startBurnSequence();
@@ -786,6 +909,10 @@ async function fetchNote(id) {
     document.getElementById('readNotFound').style.display = 'block';
   }
 }
+
+// ---------------------------------------------------------------------------
+// Burn sequence (unchanged)
+// ---------------------------------------------------------------------------
 
 function startBurnSequence() {
   const BURN_SECONDS = 8;
@@ -807,7 +934,6 @@ function startBurnSequence() {
   const countText = document.getElementById('burnCountText');
   const progressFill = document.getElementById('burnProgressFill');
 
-  // Start shrinking the progress bar
   requestAnimationFrame(() => {
     progressFill.style.width = '0%';
     progressFill.style.transition = `width ${BURN_SECONDS}s linear`;
@@ -830,13 +956,11 @@ function burnTheNote() {
 
   noteContent.classList.add('burning');
 
-  // After burn animation, swap to ashes state
   setTimeout(() => {
     noteInner.style.display = 'none';
     document.getElementById('ashesState').style.display = 'block';
   }, 1600);
 }
-
 
 // Client-side routing for /note/<id>
 window.addEventListener('popstate', init);
