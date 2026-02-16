@@ -230,7 +230,7 @@ def create_note():
             return jsonify({"error": "storage quota exceeded, please try again later"}), 507
     burn_after_read = bool(data.get("burn_after_read", False))
     expires_minutes = int(data.get("expires_minutes", 60))
-    expires_minutes = max(1, min(expires_minutes, 1440))
+    expires_minutes = max(1, min(expires_minutes, 43200))
     max_reads = int(data.get("max_reads", 0))
     max_reads = max(0, min(max_reads, 100))
     password = data.get("password")
