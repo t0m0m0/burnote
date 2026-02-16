@@ -111,6 +111,8 @@ def init_db():
         conn.execute("ALTER TABLE notes ADD COLUMN is_markdown INTEGER NOT NULL DEFAULT 0")
     if "webhook_url" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN webhook_url TEXT")
+    if "no_copy" not in columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN no_copy INTEGER NOT NULL DEFAULT 0")
     # Migrate: move BLOB/TEXT attachment_data from DB to filesystem
     if "attachment_data" in columns:
         rows = conn.execute("SELECT id, attachment_data FROM notes WHERE attachment_data IS NOT NULL").fetchall()
@@ -244,6 +246,7 @@ def create_note():
     is_markdown = bool(data.get("is_markdown", False))
     password = data.get("password")
     pw_hash = generate_password_hash(password) if password else None
+    no_copy = bool(data.get("no_copy", False))
     webhook_url = data.get("webhook_url")
     if webhook_url:
         webhook_url = str(webhook_url).strip()
@@ -258,9 +261,9 @@ def create_note():
         save_attachment(note_id, attachment_blob)
         has_attachment = 1
     db.execute(
-        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url) "
-        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)",
-        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown), webhook_url or None),
+        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url, no_copy) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)",
+        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown), webhook_url or None, int(no_copy)),
     )
     db.commit()
     base_url = request.host_url.rstrip("/")
@@ -295,7 +298,7 @@ def read_note(note_id):
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
 
-    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url"
+    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url, no_copy"
     row = db.execute(f"SELECT {_NOTE_COLS} FROM notes WHERE id = ?", (note_id,)).fetchone()
     if row is None:
         return jsonify({"error": "Note not found or has expired"}), 404
@@ -320,6 +323,7 @@ def read_note(note_id):
             "read_count": read_count,
             "max_reads": row["max_reads"],
             "password_protected": is_password_protected,
+            "no_copy": bool(row["no_copy"]),
         }
         if row["has_attachment"]:
             attachment_bytes = load_attachment(row["id"])

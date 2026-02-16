@@ -157,6 +157,7 @@ async function createNote() {
       max_reads: burnToggle ? 0 : maxReads,
       password: password,
       webhook_url: document.getElementById('webhookUrl').value.trim() || undefined,
+      no_copy: document.getElementById('noCopyToggle').checked,
       is_markdown: document.getElementById('markdownToggle').checked,
     };
     if (encAttachmentData) {
@@ -465,6 +466,24 @@ async function fetchNote(password) {
   if (data.max_reads > 0) metaHtml += `<span>📊 ${data.read_count}/${data.max_reads}回</span>`;
   if (data.password_protected) metaHtml += `<span>🔑 パスワード保護</span>`;
   document.getElementById('noteMeta').innerHTML = metaHtml;
+
+  // No-copy protection
+  if (data.no_copy) {
+    noteTextEl.classList.add('no-copy-protected', 'no-copy-watermark');
+    noteTextEl.setAttribute('data-watermark', new Date().toLocaleString('ja-JP'));
+    const notice = document.createElement('div');
+    notice.className = 'no-copy-notice';
+    notice.textContent = '🛡️ このメモはコピー抑止が有効です（完全な防止ではありません）';
+    noteTextEl.parentNode.insertBefore(notice, noteTextEl);
+    noteTextEl.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        noteTextEl.classList.add('content-blurred');
+      } else {
+        noteTextEl.classList.remove('content-blurred');
+      }
+    });
+  }
 
   // Remove key from URL
   if (window.location.hash) {
