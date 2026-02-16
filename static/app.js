@@ -222,6 +222,8 @@ function copyUrl() {
     const btn = document.getElementById('copyBtn');
     btn.textContent = '✅ コピー済';
     btn.style.borderColor = 'var(--success)';
+    btn.classList.add('copy-success');
+    setTimeout(() => btn.classList.remove('copy-success'), 400);
     setTimeout(() => {
       btn.textContent = '📋 コピー';
       btn.style.borderColor = '';
