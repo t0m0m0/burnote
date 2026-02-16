@@ -222,6 +222,15 @@ function copyUrl() {
       btn.textContent = '📋 コピー';
       btn.style.borderColor = '';
     }, 2000);
+
+    // Show prompt and prominent button after copy
+    const prompt = document.getElementById('copySuccessPrompt');
+    const link = document.getElementById('newNoteLink');
+    if (prompt) prompt.style.display = 'block';
+    if (link) {
+      link.className = 'btn-new-prominent';
+      link.textContent = '+ 新しいメモを作成';
+    }
   });
 }
 
