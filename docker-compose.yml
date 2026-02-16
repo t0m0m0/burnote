@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - app-data:/app/data
+      - app-attachments:/app/attachments
+    environment:
+      - RATE_LIMIT_STORAGE_URI=${RATE_LIMIT_STORAGE_URI:-memory://}
+      - DB_PATH=/app/data/kemuri.db
+      - ATTACHMENT_DIR=/app/attachments
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  app-attachments:

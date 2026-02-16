@@ -26,8 +26,9 @@ limiter = Limiter(
     strategy="fixed-window",
     storage_options={"socket_connect_timeout": 2} if RATE_LIMIT_STORAGE_URI.startswith("redis") else {},
 )
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kemuri.db")
-ATTACHMENT_DIR = Path(os.path.dirname(os.path.abspath(__file__))) / "attachments"
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.environ.get("DB_PATH", os.path.join(_base_dir, "kemuri.db"))
+ATTACHMENT_DIR = Path(os.environ.get("ATTACHMENT_DIR", os.path.join(_base_dir, "attachments")))
 ATTACHMENT_DIR.mkdir(exist_ok=True)
 
 # Disk usage limits
