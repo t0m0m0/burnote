@@ -1696,23 +1696,13 @@ details > .options {
 .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
 
 /* ---- Markdown Editor ---- */
-.md-toggle-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.6rem;
-}
-.md-toggle-bar .toggle {
-  font-size: 0.82rem;
-}
-
 .md-editor-wrap {
   position: relative;
 }
 
 /* Toolbar */
 .md-toolbar {
-  display: none;
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 2px;
@@ -1722,9 +1712,6 @@ details > .options {
   border-bottom: none;
   border-radius: var(--radius) var(--radius) 0 0;
   overflow-x: auto;
-}
-.md-toolbar.active {
-  display: flex;
 }
 .md-toolbar-sep {
   width: 1px;
@@ -1791,13 +1778,13 @@ details > .options {
   border-radius: 0 0 var(--radius) 0;
   background: var(--surface2);
 }
-/* When toolbar active, textarea top corners become square */
-.md-toolbar.active + .md-editor-body textarea,
-.md-toolbar.active + .md-editor-body .md-pane-edit textarea {
+/* Textarea top corners are square (toolbar always visible) */
+.md-toolbar + .md-editor-body textarea,
+.md-toolbar + .md-editor-body .md-pane-edit textarea {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
-.md-toolbar.active + .md-editor-body.split .md-pane-preview {
+.md-toolbar + .md-editor-body.split .md-pane-preview {
   border-top-right-radius: 0;
 }
 
@@ -1877,76 +1864,70 @@ details > .options {
 
 /* Desktop: side-by-side */
 @media (min-width: 769px) {
-  .md-editor-wrap.md-active .md-editor-body {
+  .md-editor-wrap .md-editor-body {
     flex-direction: row;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-edit,
-  .md-editor-wrap.md-active .md-editor-body .md-pane-preview {
+  .md-editor-wrap .md-editor-body .md-pane-edit,
+  .md-editor-wrap .md-editor-body .md-pane-preview {
     flex: 1 1 50%;
     min-width: 0;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-edit textarea {
+  .md-editor-wrap .md-editor-body .md-pane-edit textarea {
     border-radius: 0 0 0 var(--radius);
     border-right: none;
     min-height: 280px;
     resize: none;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-preview {
+  .md-editor-wrap .md-editor-body .md-pane-preview {
     display: block;
     border: 1px solid var(--border);
     border-left: none;
     border-radius: 0 0 var(--radius) 0;
     background: var(--surface2);
   }
-  .md-editor-wrap.md-active .md-tabs {
+  .md-editor-wrap .md-tabs {
     display: none !important;
   }
-  /* Fix preview border-top-right when toolbar is active */
-  .md-toolbar.active + .md-editor-body .md-pane-preview {
+  .md-toolbar + .md-editor-body .md-pane-preview {
     border-top-right-radius: 0;
   }
 }
 
 /* Mobile: tabbed */
 @media (max-width: 768px) {
-  .md-editor-wrap.md-active .md-tabs {
+  .md-editor-wrap .md-tabs {
     display: flex;
   }
-  .md-editor-wrap.md-active .md-editor-body {
+  .md-editor-wrap .md-editor-body {
     flex-direction: column;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-edit {
+  .md-editor-wrap .md-editor-body .md-pane-edit {
     display: block;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-edit textarea {
+  .md-editor-wrap .md-editor-body .md-pane-edit textarea {
     border-radius: 0;
     border-top: none;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-preview {
+  .md-editor-wrap .md-editor-body .md-pane-preview {
     display: none;
     border: 1px solid var(--border);
     border-top: none;
     border-radius: 0 0 var(--radius) var(--radius);
     background: var(--surface2);
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-edit.hidden {
+  .md-editor-wrap .md-editor-body .md-pane-edit.hidden {
     display: none;
   }
-  .md-editor-wrap.md-active .md-editor-body .md-pane-preview.active {
+  .md-editor-wrap .md-editor-body .md-pane-preview.active {
     display: block;
   }
-  .md-editor-wrap.md-active .md-toolbar.active + .md-editor-body .md-pane-edit textarea {
+  .md-editor-wrap .md-toolbar + .md-editor-body .md-pane-edit textarea {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
   }
 }
 
-/* Transition for toggle */
-.md-editor-wrap .md-toolbar,
-.md-editor-wrap .md-pane-preview,
-.md-editor-wrap .md-tabs {
-  transition: opacity 0.2s ease;
-}
+
 
 </style>
 </head>
@@ -1965,16 +1946,7 @@ details > .options {
   <!-- CREATE VIEW -->
   <div id="createView">
     <div class="card stagger-2">
-      <!-- Markdown toggle (prominent) -->
-      <div class="md-toggle-bar">
-        <label class="toggle">
-          <input type="checkbox" id="markdownToggle">
-          <span class="toggle-slider"></span>
-          📝 Markdownエディタ
-        </label>
-      </div>
-
-      <!-- Markdown editor wrapper -->
+      <!-- Markdown editor -->
       <div class="md-editor-wrap" id="mdEditorWrap">
         <!-- Toolbar -->
         <div class="md-toolbar" id="mdToolbar">

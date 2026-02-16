@@ -159,7 +159,7 @@ async function createNote() {
       webhook_url: document.getElementById('webhookUrl').value.trim() || undefined,
       no_copy: true,
       allowed_ips: document.getElementById('allowedIps').value.trim() || undefined,
-      is_markdown: document.getElementById('markdownToggle').checked,
+      is_markdown: true,
     };
     if (encAttachmentData) {
       body.attachment_data = encAttachmentData;
@@ -602,32 +602,11 @@ document.getElementById('noteContent').addEventListener('input', function() {
 // Markdown Editor: toolbar, live preview, tab switching
 // ---------------------------------------------------------------------------
 (function() {
-  const mdToggle = document.getElementById('markdownToggle');
-  const mdWrap = document.getElementById('mdEditorWrap');
-  const mdToolbar = document.getElementById('mdToolbar');
   const mdTabs = document.getElementById('mdTabs');
   const mdPaneEdit = document.getElementById('mdPaneEdit');
   const mdPanePreview = document.getElementById('mdPanePreview');
-  const mdPreviewContent = document.getElementById('mdPreviewContent');
+  const mdToolbar = document.getElementById('mdToolbar');
   const textarea = document.getElementById('noteContent');
-
-  // --- Toggle markdown mode ---
-  mdToggle.addEventListener('change', function() {
-    if (this.checked) {
-      mdWrap.classList.add('md-active');
-      mdToolbar.classList.add('active');
-      updateMdPreview();
-    } else {
-      mdWrap.classList.remove('md-active');
-      mdToolbar.classList.remove('active');
-      mdPanePreview.classList.remove('active');
-      mdPaneEdit.classList.remove('hidden');
-      // Reset mobile tabs
-      mdTabs.querySelectorAll('button').forEach(function(b) {
-        b.classList.toggle('active', b.dataset.tab === 'edit');
-      });
-    }
-  });
 
   // --- Mobile tab switching ---
   mdTabs.addEventListener('click', function(e) {
@@ -710,7 +689,6 @@ document.getElementById('noteContent').addEventListener('input', function() {
 })();
 
 function updateMdPreview() {
-  if (!document.getElementById('markdownToggle').checked) return;
   const textarea = document.getElementById('noteContent');
   const previewEl = document.getElementById('mdPreviewContent');
   if (!textarea || !previewEl) return;
