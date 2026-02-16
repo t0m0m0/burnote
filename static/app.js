@@ -642,4 +642,35 @@ document.getElementById('submitPasswordBtn').addEventListener('click', submitPas
 
 setupFileAttachment();
 window.addEventListener('popstate', init);
+
+// ---------------------------------------------------------------------------
+// Theme toggle (dark/light)
+// ---------------------------------------------------------------------------
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  btn.textContent = isLight ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeIcon();
+}
+
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+initTheme();
 init();
