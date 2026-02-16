@@ -476,6 +476,11 @@ function startDissolveSequence(expiresAt) {
 
   const countText = document.getElementById('dissolveCountText');
   const startTime = Date.now();
+  const readContent = document.getElementById('readContent');
+  const noteText = document.getElementById('noteText');
+  let urgencyApplied = false;
+  let fadingApplied = false;
+
   const timer = setInterval(() => {
     const elapsed = Math.round((Date.now() - startTime) / 1000);
     const remaining = totalSeconds - elapsed;
@@ -484,6 +489,24 @@ function startDissolveSequence(expiresAt) {
       dissolveNote();
     } else {
       countText.textContent = formatRemaining(remaining);
+
+      // Urgent pulse when < 30s remaining
+      if (remaining <= 30 && !urgencyApplied) {
+        urgencyApplied = true;
+        if (readContent) readContent.classList.add('burn-urgent');
+        const timerLabel = document.querySelector('.timer-label');
+        if (timerLabel) timerLabel.classList.add('urgent');
+      }
+
+      // Fade note content when < 60s remaining
+      if (remaining <= 60 && noteText) {
+        if (!fadingApplied) {
+          fadingApplied = true;
+          noteText.classList.add('fading');
+        }
+        const fadeRatio = Math.max(0.4, remaining / 60);
+        noteText.style.opacity = fadeRatio;
+      }
     }
   }, 1000);
 }

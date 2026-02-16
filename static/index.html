@@ -509,6 +509,35 @@ input[type="password"]::placeholder {
   box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
 }
 
+.burn-urgent {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+  animation: urgentPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes urgentPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.25);
+  }
+}
+
+.timer-label.urgent {
+  animation: textPulse 1s ease-in-out infinite;
+  font-weight: 600;
+}
+
+@keyframes textPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.note-content.fading {
+  transition: opacity 1s ease;
+}
+
 .note-content.dissolving {
   animation: smokeDissolve 3s ease forwards;
   pointer-events: none;
