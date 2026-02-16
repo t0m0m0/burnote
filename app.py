@@ -185,7 +185,9 @@ def set_security_headers(response):
         "default-src 'self'; "
         "script-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; "
+        "img-src 'self' data: blob:; "
+        "media-src blob:; "
+        "frame-src blob:; "
         "connect-src 'self'"
     )
     response.headers["X-Content-Type-Options"] = "nosniff"
