@@ -1164,13 +1164,6 @@ input[type="password"]::placeholder {
   margin-top: 0.35rem;
   transition: color 0.25s ease;
 }
-.char-counter.warning {
-  color: #fbbf24;
-}
-.char-counter.danger {
-  color: var(--danger);
-  font-weight: 500;
-}
 
 .pdf-preview-frame {
   width: 100%;
@@ -1344,7 +1337,7 @@ input[type="password"]::placeholder {
     <div class="card">
       <textarea id="noteContent" placeholder="ここに秘密のメモを入力...
 読まれた後、煙のように消えます。"></textarea>
-      <div id="charCounter" class="char-counter">0 / 10,000文字</div>
+      <div id="charCounter" class="char-counter">0文字</div>
       <div class="options">
         <div class="option-group">
           <label>消滅モード</label>

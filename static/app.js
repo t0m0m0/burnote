@@ -583,19 +583,13 @@ function dissolveNote() {
 // ---------------------------------------------------------------------------
 // Character counter
 // ---------------------------------------------------------------------------
-const MAX_CHARS = 10000;
 function updateCharCounter() {
   const textarea = document.getElementById('noteContent');
   const counter = document.getElementById('charCounter');
   if (!textarea || !counter) return;
   const len = textarea.value.length;
-  counter.textContent = len.toLocaleString() + ' / ' + MAX_CHARS.toLocaleString() + '文字';
+  counter.textContent = len.toLocaleString() + '文字';
   counter.classList.remove('warning', 'danger');
-  if (len >= MAX_CHARS) {
-    counter.classList.add('danger');
-  } else if (len >= MAX_CHARS * 0.8) {
-    counter.classList.add('warning');
-  }
 }
 document.getElementById('noteContent').addEventListener('input', updateCharCounter);
 
