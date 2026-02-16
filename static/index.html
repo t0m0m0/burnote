@@ -40,9 +40,14 @@
 
 [data-theme="light"] .bg-glow {
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(180, 170, 158, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 50% at 80% 20%, rgba(150, 140, 130, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 30% 20%, rgba(74, 90, 106, 0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 60% at 70% 60%, rgba(90, 100, 110, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 50% 90%, rgba(80, 90, 100, 0.02) 0%, transparent 50%),
     var(--bg);
+}
+
+[data-theme="light"] .noise-overlay {
+  opacity: 0.025;
 }
 
 *,
@@ -73,12 +78,24 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(138, 154, 169, 0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 50% at 80% 20%, rgba(120, 130, 140, 0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(138, 154, 169, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 30% 20%, rgba(138, 154, 169, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 60% at 70% 60%, rgba(120, 135, 150, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 50% 90%, rgba(100, 115, 130, 0.03) 0%, transparent 50%),
     var(--bg);
-  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
-  animation: bgShift 20s ease-in-out infinite;
+  animation: fogDrift 30s ease-in-out infinite alternate;
+}
+
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
 }
 
 .container {
@@ -86,6 +103,7 @@ body {
   margin: 0 auto;
   padding: 2rem 1.25rem 3rem;
   position: relative;
+  z-index: 1;
 }
 
 .header {
@@ -141,17 +159,20 @@ body {
 }
 
 .card {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.75rem;
   margin-bottom: 1.75rem;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .card:hover {
-  border-color: rgba(138, 154, 169, 0.25);
-  box-shadow: 0 0 20px rgba(138, 154, 169, 0.04);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 textarea {
@@ -851,18 +872,18 @@ input[type="password"]::placeholder {
   color: var(--text-dim);
 }
 
-@keyframes bgShift {
-  0%, 100% {
-    background-position: 0% 0%, 100% 0%, 0% 100%, 0% 0%;
-  }
-  25% {
-    background-position: 50% 20%, 60% 40%, 40% 60%, 0% 0%;
+@keyframes fogDrift {
+  0% {
+    background-position: 0% 0%, 100% 100%, 50% 0%, 0% 0%;
+    background-size: 200% 200%, 180% 180%, 160% 160%, 100% 100%;
   }
   50% {
-    background-position: 100% 50%, 20% 80%, 80% 20%, 0% 0%;
+    background-position: 30% 20%, 60% 40%, 80% 60%, 0% 0%;
+    background-size: 220% 220%, 200% 200%, 180% 180%, 100% 100%;
   }
-  75% {
-    background-position: 30% 80%, 80% 60%, 60% 40%, 0% 0%;
+  100% {
+    background-position: 60% 40%, 20% 80%, 40% 30%, 0% 0%;
+    background-size: 200% 200%, 180% 180%, 160% 160%, 100% 100%;
   }
 }
 
@@ -1411,6 +1432,7 @@ details > .options {
 </head>
 <body>
 <div class="bg-glow"></div>
+<div class="noise-overlay"></div>
 
 <div class="container">
   <div class="header stagger-1">
