@@ -363,44 +363,50 @@ async function fetchNote(password) {
         const img = document.createElement('img');
         img.src = objUrl;
         img.alt = meta.name;
+        img.loading = 'lazy';
         previewEl.appendChild(img);
       } else if (meta.type.startsWith('video/')) {
         const video = document.createElement('video');
         video.src = objUrl;
         video.controls = true;
-        video.style.maxWidth = '100%';
+        video.playsInline = true;
+        video.preload = 'metadata';
         previewEl.appendChild(video);
       } else if (meta.type.startsWith('audio/')) {
+        const audioWrapper = document.createElement('div');
+        audioWrapper.className = 'audio-preview-wrapper';
+        const icon = document.createElement('div');
+        icon.className = 'audio-preview-icon';
+        icon.textContent = '🎵';
+        audioWrapper.appendChild(icon);
         const audio = document.createElement('audio');
         audio.src = objUrl;
         audio.controls = true;
-        audio.style.width = '100%';
-        previewEl.appendChild(audio);
+        audio.preload = 'metadata';
+        audioWrapper.appendChild(audio);
+        previewEl.appendChild(audioWrapper);
       } else if (meta.type === 'application/pdf') {
-        const embed = document.createElement('embed');
-        embed.src = objUrl;
-        embed.type = 'application/pdf';
-        embed.style.width = '100%';
-        embed.style.height = '500px';
-        embed.style.borderRadius = '8px';
-        previewEl.appendChild(embed);
+        const iframe = document.createElement('iframe');
+        iframe.src = objUrl;
+        iframe.className = 'pdf-preview-frame';
+        iframe.title = meta.name;
+        previewEl.appendChild(iframe);
       } else {
         const fallbackDiv = document.createElement('div');
-        fallbackDiv.style.padding = '1rem';
+        fallbackDiv.className = 'file-fallback-preview';
         const iconSpan = document.createElement('span');
-        iconSpan.style.fontSize = '2rem';
-        iconSpan.textContent = '📄';
+        iconSpan.className = 'file-fallback-icon';
+        iconSpan.textContent = getFileTypeIcon(meta.type, meta.name);
         fallbackDiv.appendChild(iconSpan);
-        const nameDiv = document.createElement('div');
-        nameDiv.style.cssText = 'margin-top:0.5rem; font-size:0.9rem;';
-        nameDiv.textContent = meta.name;
-        fallbackDiv.appendChild(nameDiv);
-        const infoDiv = document.createElement('div');
-        infoDiv.style.cssText = 'font-size:0.78rem; color:var(--text-dim);';
-        infoDiv.textContent = formatFileSize(meta.size) + ' ・ ' + (meta.type || '不明');
-        fallbackDiv.appendChild(infoDiv);
+        const label = document.createElement('div');
+        label.className = 'file-fallback-label';
+        label.textContent = 'プレビューできないファイル形式です';
+        fallbackDiv.appendChild(label);
         previewEl.appendChild(fallbackDiv);
       }
+
+      // Always show file info bar below preview
+      previewEl.appendChild(createFileInfoBar(meta));
 
       document.getElementById('downloadBtn').textContent = `📥 ${meta.name} をダウンロード`;
       attachmentView.style.display = 'block';
@@ -574,6 +580,40 @@ function removeAttachment(e) {
   document.getElementById('fileSizeError').style.display = 'none';
   const thumb = document.getElementById('fileThumb');
   if (thumb.src) { URL.revokeObjectURL(thumb.src); thumb.src = ''; }
+}
+
+// ---------------------------------------------------------------------------
+// Attachment preview helpers
+// ---------------------------------------------------------------------------
+function getFileTypeIcon(mimeType, fileName) {
+  if (!mimeType) return '📄';
+  if (mimeType.startsWith('image/')) return '🖼️';
+  if (mimeType.startsWith('video/')) return '🎬';
+  if (mimeType.startsWith('audio/')) return '🎵';
+  if (mimeType === 'application/pdf') return '📑';
+  if (mimeType.includes('zip') || mimeType.includes('compress') || mimeType.includes('archive')) return '🗜️';
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || (fileName && /\.xlsx?$/i.test(fileName))) return '📊';
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint') || (fileName && /\.pptx?$/i.test(fileName))) return '📽️';
+  if (mimeType.includes('document') || mimeType.includes('word') || mimeType.includes('text') || (fileName && /\.docx?$/i.test(fileName))) return '📝';
+  if (mimeType.includes('json') || mimeType.includes('xml') || mimeType.includes('javascript') || mimeType.includes('html')) return '💻';
+  return '📄';
+}
+
+function createFileInfoBar(meta) {
+  const bar = document.createElement('div');
+  bar.className = 'attachment-info-bar';
+  bar.innerHTML = `
+    <span class="attachment-info-icon">${getFileTypeIcon(meta.type, meta.name)}</span>
+    <span class="attachment-info-name">${escapeHtml(meta.name)}</span>
+    <span class="attachment-info-detail">${formatFileSize(meta.size)}${meta.type ? ' ・ ' + escapeHtml(meta.type) : ''}</span>
+  `;
+  return bar;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ---------------------------------------------------------------------------
