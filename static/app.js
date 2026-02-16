@@ -158,6 +158,7 @@ async function createNote() {
       password: password,
       webhook_url: document.getElementById('webhookUrl').value.trim() || undefined,
       no_copy: document.getElementById('noCopyToggle').checked,
+      allowed_ips: document.getElementById('allowedIps').value.trim() || undefined,
       is_markdown: document.getElementById('markdownToggle').checked,
     };
     if (encAttachmentData) {
