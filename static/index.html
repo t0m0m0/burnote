@@ -6,40 +6,42 @@
 <meta name="referrer" content="no-referrer">
 <title>煙 Kemuri — 煙のように消える秘密のメモ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💨</text></svg>">
-<link href="/vendor/inter.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="/vendor/qrcode.min.js"></script>
 <style>
 :root {
-  --bg: #0a0a12;
-  --surface: #12121e;
-  --surface2: #1a1a2e;
-  --border: #2a2a45;
-  --text: #e0e0f0;
-  --text-dim: #7878a0;
-  --accent: #8b5cf6;
-  --accent2: #a78bfa;
-  --danger: #ef4444;
-  --success: #34d399;
-  --radius: 12px;
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface2: #1e1e1e;
+  --border: #2a2a2a;
+  --text: #e8e4e0;
+  --text-dim: #787470;
+  --accent: #8a9aa9;
+  --accent2: #a0b0be;
+  --danger: #c84b31;
+  --success: #5a9a6e;
+  --radius: 10px;
 }
 
 [data-theme="light"] {
-  --bg: #f5f5f7;
-  --surface: #ffffff;
-  --surface2: #eeeef0;
-  --border: #d1d1d6;
-  --text: #1a1a2e;
-  --text-dim: #6b6b80;
-  --accent: #7c3aed;
-  --accent2: #6d28d9;
-  --danger: #dc2626;
-  --success: #16a34a;
+  --bg: #f5f0eb;
+  --surface: #faf7f3;
+  --surface2: #ede8e2;
+  --border: #d4cdc5;
+  --text: #1a1815;
+  --text-dim: #7a756e;
+  --accent: #4a5a6a;
+  --accent2: #3a4a5a;
+  --danger: #b84430;
+  --success: #4a8a5e;
 }
 
 [data-theme="light"] .bg-glow {
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(124, 58, 237, 0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 50% at 80% 20%, rgba(99, 60, 200, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(180, 170, 158, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 50% at 80% 20%, rgba(150, 140, 130, 0.06) 0%, transparent 60%),
     var(--bg);
 }
 
@@ -52,7 +54,7 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -71,9 +73,9 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(139, 92, 246, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 50% at 80% 20%, rgba(99, 60, 200, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(138, 154, 169, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 50% at 80% 20%, rgba(120, 130, 140, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(138, 154, 169, 0.04) 0%, transparent 60%),
     var(--bg);
   background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
   animation: bgShift 20s ease-in-out infinite;
@@ -123,13 +125,12 @@ body {
 }
 
 .header h1 {
+  font-family: 'Shippori Mincho', serif;
   font-size: 1.75rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, #c4b5fd 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-shadow: 0 1px 8px rgba(138, 154, 169, 0.15);
   margin-bottom: 0.25rem;
 }
 
@@ -149,8 +150,8 @@ body {
 }
 
 .card:hover {
-  border-color: rgba(139, 92, 246, 0.25);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.04);
+  border-color: rgba(138, 154, 169, 0.25);
+  box-shadow: 0 0 20px rgba(138, 154, 169, 0.04);
 }
 
 textarea {
@@ -160,7 +161,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.95rem;
   line-height: 1.7;
   padding: 1rem;
@@ -171,7 +172,7 @@ textarea {
 
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(138, 154, 169, 0.15);
 }
 
 textarea::placeholder {
@@ -260,7 +261,7 @@ input[type="password"] {
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) - 4px);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
@@ -269,7 +270,7 @@ input[type="password"] {
 }
 
 select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237878a0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23787470' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   padding-right: 2rem;
@@ -280,7 +281,7 @@ select:focus,
 input[type="text"]:focus,
 input[type="password"]:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(138, 154, 169, 0.15);
 }
 
 select option {
@@ -305,7 +306,7 @@ input[type="password"]::placeholder {
   border-radius: var(--radius);
   background: var(--surface2);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
@@ -325,22 +326,22 @@ input[type="password"]::placeholder {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+  background: var(--accent);
   border: none;
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #9b6ff7 0%, var(--accent) 100%);
-  box-shadow: 0 6px 28px rgba(139, 92, 246, 0.4);
+  background: var(--accent2);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.3);
   border: none;
 }
 
 .btn-primary:active {
-  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.25);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:disabled {
@@ -549,7 +550,7 @@ input[type="password"]::placeholder {
   border-radius: 2px;
   background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 40%, var(--danger) 100%);
   transition: width 1s linear;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 8px rgba(138, 154, 169, 0.3);
 }
 
 .burn-urgent {
@@ -595,7 +596,7 @@ input[type="password"]::placeholder {
   left: 50%;
   transform: translate(-50%, -50%) rotate(-30deg);
   font-size: 1.5rem;
-  color: rgba(139, 92, 246, 0.07);
+  color: rgba(138, 154, 169, 0.07);
   white-space: nowrap;
   pointer-events: none;
   z-index: 1;
@@ -605,8 +606,8 @@ input[type="password"]::placeholder {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(138, 154, 169, 0.08);
+  border: 1px solid rgba(138, 154, 169, 0.2);
   border-radius: calc(var(--radius) - 4px);
   font-size: 0.8rem;
   color: var(--accent2);
@@ -682,7 +683,7 @@ input[type="password"]::placeholder {
   background: none;
   border: none;
   color: var(--accent2);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -717,22 +718,22 @@ input[type="password"]::placeholder {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem 1.5rem;
-  background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: var(--radius);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   animation: slideIn 0.4s ease forwards;
 }
 
 .btn-new-prominent:hover {
-  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
   transform: translateY(-1px);
 }
 
@@ -755,8 +756,8 @@ input[type="password"]::placeholder {
   border: none;
   border-radius: 50px;
   background: linear-gradient(135deg, #facc15, #f59e0b);
-  color: #1a1a2e;
-  font-family: 'Inter', sans-serif;
+  color: #1a1815;
+  font-family: 'Noto Sans JP', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -988,7 +989,7 @@ input[type="password"]::placeholder {
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   font-size: 0.8rem;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
 }
 
 #fileSizeError {
@@ -1118,8 +1119,8 @@ input[type="password"]::placeholder {
 
 #dropZone.drag-over {
   border-color: var(--accent) !important;
-  background: rgba(139, 92, 246, 0.08) !important;
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.15);
+  background: rgba(138, 154, 169, 0.08) !important;
+  box-shadow: 0 0 16px rgba(138, 154, 169, 0.15);
 }
 
 #attachmentPreview img,
