@@ -634,6 +634,43 @@ input[type="password"]::placeholder {
   text-decoration: underline;
 }
 
+.copy-success-prompt {
+  text-align: center;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: calc(var(--radius) - 4px);
+  color: var(--success);
+  font-size: 0.85rem;
+  animation: slideIn 0.4s ease forwards;
+}
+
+.btn-new-prominent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.25);
+  animation: slideIn 0.4s ease forwards;
+}
+
+.btn-new-prominent:hover {
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.35);
+  transform: translateY(-1px);
+}
+
 .coffee-section {
   text-align: center;
   padding: 1.5rem 0;
@@ -1134,8 +1171,9 @@ input[type="password"]::placeholder {
         <span class="icon">💨</span>
         <span>このメモは閲覧後に消滅します</span>
       </div>
+      <div id="copySuccessPrompt" class="copy-success-prompt" style="display:none;">✨ もう1つ秘密のメモを作成しますか？</div>
       <div style="text-align:center; margin-top:1rem;">
-        <a href="/" class="btn-new">+ 新しいメモを作成</a>
+        <a href="/" id="newNoteLink" class="btn-new">+ 新しいメモを作成</a>
       </div>
     </div>
   </div>
