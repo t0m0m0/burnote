@@ -6,6 +6,8 @@ import base64
 import shutil
 import threading
 import atexit
+import urllib.request
+import json as json_module
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory, g
@@ -107,6 +109,8 @@ def init_db():
         conn.execute("ALTER TABLE notes ADD COLUMN has_attachment INTEGER NOT NULL DEFAULT 0")
     if "is_markdown" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN is_markdown INTEGER NOT NULL DEFAULT 0")
+    if "webhook_url" not in columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN webhook_url TEXT")
     # Migrate: move BLOB/TEXT attachment_data from DB to filesystem
     if "attachment_data" in columns:
         rows = conn.execute("SELECT id, attachment_data FROM notes WHERE attachment_data IS NOT NULL").fetchall()
@@ -240,6 +244,11 @@ def create_note():
     is_markdown = bool(data.get("is_markdown", False))
     password = data.get("password")
     pw_hash = generate_password_hash(password) if password else None
+    webhook_url = data.get("webhook_url")
+    if webhook_url:
+        webhook_url = str(webhook_url).strip()
+        if len(webhook_url) > 500 or not (webhook_url.startswith("http://") or webhook_url.startswith("https://")):
+            return jsonify({"error": "webhook_url must be a valid HTTP(S) URL (max 500 chars)"}), 400
     note_id = uuid.uuid4().hex
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(minutes=expires_minutes)
@@ -249,9 +258,9 @@ def create_note():
         save_attachment(note_id, attachment_blob)
         has_attachment = 1
     db.execute(
-        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown) "
-        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)",
-        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown)),
+        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)",
+        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown), webhook_url or None),
     )
     db.commit()
     base_url = request.host_url.rstrip("/")
@@ -261,6 +270,23 @@ def create_note():
         "expires_at": expires_at.isoformat(),
     }), 201
 
+def send_webhook_notification(url, note_id, read_count):
+    """Fire-and-forget webhook notification."""
+    def _send():
+        try:
+            payload = json_module.dumps({
+                'event': 'note_read',
+                'note_id': note_id,
+                'read_count': read_count,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }).encode('utf-8')
+            req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass
+    t = threading.Thread(target=_send, daemon=True)
+    t.start()
+
 @app.route("/api/notes/<note_id>", methods=["GET", "OPTIONS"])
 @limiter.limit("30/minute")
 def read_note(note_id):
@@ -269,7 +295,7 @@ def read_note(note_id):
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
 
-    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown"
+    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url"
     row = db.execute(f"SELECT {_NOTE_COLS} FROM notes WHERE id = ?", (note_id,)).fetchone()
     if row is None:
         return jsonify({"error": "Note not found or has expired"}), 404
@@ -318,6 +344,8 @@ def read_note(note_id):
         db.commit()
         if row["has_attachment"]:
             delete_attachment(note_id)
+        if row["webhook_url"]:
+            send_webhook_notification(row["webhook_url"], note_id, 1)
         return jsonify(response_data)
     # Normal notes with max_reads — atomic UPDATE to prevent TOCTOU race condition
     max_reads = row["max_reads"]
@@ -344,12 +372,16 @@ def read_note(note_id):
             if row["has_attachment"]:
                 delete_attachment(note_id)
         db.commit()
+        if row["webhook_url"]:
+            send_webhook_notification(row["webhook_url"], note_id, new_count)
         return jsonify(response_data)
     else:
         # No read limit — just increment
         db.execute("UPDATE notes SET read_count = read_count + 1 WHERE id = ?", (note_id,))
         db.commit()
         new_count = row["read_count"] + 1
+        if row["webhook_url"]:
+            send_webhook_notification(row["webhook_url"], note_id, new_count)
         return jsonify(_build_response(row, new_count, False))
 
 
