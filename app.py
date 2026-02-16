@@ -88,7 +88,8 @@ def init_db():
             expires_at    TEXT NOT NULL,
             read_count    INTEGER NOT NULL DEFAULT 0,
             max_reads     INTEGER NOT NULL DEFAULT 0,
-            password_hash TEXT
+            password_hash TEXT,
+            is_markdown   INTEGER NOT NULL DEFAULT 0
         );
         DROP TABLE IF EXISTS stats;
     """)
@@ -103,6 +104,8 @@ def init_db():
         conn.execute("ALTER TABLE notes ADD COLUMN attachment_meta TEXT")
     if "has_attachment" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN has_attachment INTEGER NOT NULL DEFAULT 0")
+    if "is_markdown" not in columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN is_markdown INTEGER NOT NULL DEFAULT 0")
     # Migrate: move BLOB/TEXT attachment_data from DB to filesystem
     if "attachment_data" in columns:
         rows = conn.execute("SELECT id, attachment_data FROM notes WHERE attachment_data IS NOT NULL").fetchall()
@@ -233,6 +236,7 @@ def create_note():
     expires_minutes = max(1, min(expires_minutes, 43200))
     max_reads = int(data.get("max_reads", 0))
     max_reads = max(0, min(max_reads, 100))
+    is_markdown = bool(data.get("is_markdown", False))
     password = data.get("password")
     pw_hash = generate_password_hash(password) if password else None
     note_id = uuid.uuid4().hex
@@ -244,9 +248,9 @@ def create_note():
         save_attachment(note_id, attachment_blob)
         has_attachment = 1
     db.execute(
-        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta) "
-        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
-        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta),
+        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)",
+        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown)),
     )
     db.commit()
     base_url = request.host_url.rstrip("/")
@@ -264,7 +268,7 @@ def read_note(note_id):
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
 
-    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta"
+    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown"
     row = db.execute(f"SELECT {_NOTE_COLS} FROM notes WHERE id = ?", (note_id,)).fetchone()
     if row is None:
         return jsonify({"error": "Note not found or has expired"}), 404
@@ -295,6 +299,8 @@ def read_note(note_id):
             if attachment_bytes:
                 resp["attachment_data"] = base64.b64encode(attachment_bytes).decode("ascii")
                 resp["attachment_meta"] = row["attachment_meta"]
+        if row["is_markdown"]:
+            resp["is_markdown"] = True
         return resp
 
     # Burn-after-read: atomic DELETE to prevent race conditions
@@ -350,3 +356,4 @@ init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=False)
+# marker
