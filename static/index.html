@@ -1154,6 +1154,13 @@ input[type="password"]::placeholder {
           </label>
         </div>
       </div>
+      <div class="options" style="margin-top:0.5rem;">
+        <div class="option-group" style="flex-basis:100%;">
+          <label for="webhookUrl">🔔 既読通知 Webhook URL（任意）</label>
+          <input type="text" id="webhookUrl" placeholder="https://example.com/webhook">
+          <span style="font-size:0.75rem; color:var(--text-dim); margin-top:0.2rem; display:block;">メモが閲覧されるとこのURLにPOST通知を送信します</span>
+        </div>
+      </div>
       <!-- Attachment area -->
       <div id="attachmentArea" style="margin-top:1rem;">
         <label style="font-size:0.8rem; font-weight:500; color:var(--text-dim); letter-spacing:0.02em; display:block; margin-bottom:0.4rem;">📎 ファイル添付（任意・最大3MB）</label>

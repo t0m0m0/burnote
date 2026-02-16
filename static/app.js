@@ -156,6 +156,7 @@ async function createNote() {
       expires_minutes: parseInt(document.getElementById('expiry').value),
       max_reads: burnToggle ? 0 : maxReads,
       password: password,
+      webhook_url: document.getElementById('webhookUrl').value.trim() || undefined,
       is_markdown: document.getElementById('markdownToggle').checked,
     };
     if (encAttachmentData) {
