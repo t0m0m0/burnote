@@ -425,6 +425,29 @@ async function fetchNote(password) {
     attachmentView.style.display = 'none';
   }
 
+  // Read status banner
+  const banner = document.getElementById('readStatusBanner');
+  banner.className = 'read-status-banner';
+  if (data.burn_after_read) {
+    banner.textContent = '✅ このメモは初めて開かれました（既読で消滅）';
+    banner.classList.add('first-read');
+    banner.style.display = 'flex';
+  } else if (data.read_count === 1) {
+    banner.textContent = '✅ このメモは初めて開かれました';
+    banner.classList.add('first-read');
+    banner.style.display = 'flex';
+  } else if (data.read_count > 1 && data.max_reads > 0) {
+    banner.textContent = '⚠️ このメモは' + data.read_count + '/' + data.max_reads + '回目の閲覧です';
+    banner.classList.add('multi-read');
+    banner.style.display = 'flex';
+  } else if (data.read_count > 1) {
+    banner.textContent = '⚠️ このメモは既に' + data.read_count + '回開かれています';
+    banner.classList.add('multi-read');
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+
   // Meta info
   const created = new Date(data.created_at).toLocaleString('ja-JP');
   const expires = new Date(data.expires_at).toLocaleString('ja-JP');
