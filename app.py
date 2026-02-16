@@ -8,6 +8,7 @@ import threading
 import atexit
 import urllib.request
 import json as json_module
+import ipaddress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory, g
@@ -113,6 +114,8 @@ def init_db():
         conn.execute("ALTER TABLE notes ADD COLUMN webhook_url TEXT")
     if "no_copy" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN no_copy INTEGER NOT NULL DEFAULT 0")
+    if "allowed_ips" not in columns:
+        conn.execute("ALTER TABLE notes ADD COLUMN allowed_ips TEXT")
     # Migrate: move BLOB/TEXT attachment_data from DB to filesystem
     if "attachment_data" in columns:
         rows = conn.execute("SELECT id, attachment_data FROM notes WHERE attachment_data IS NOT NULL").fetchall()
@@ -247,6 +250,22 @@ def create_note():
     password = data.get("password")
     pw_hash = generate_password_hash(password) if password else None
     no_copy = bool(data.get("no_copy", False))
+    allowed_ips = data.get("allowed_ips")
+    if allowed_ips:
+        allowed_ips = str(allowed_ips).strip()
+        if len(allowed_ips) > 500:
+            return jsonify({"error": "allowed_ips is too long (max 500 chars)"}), 400
+        for entry in allowed_ips.split(','):
+            entry = entry.strip()
+            if not entry:
+                continue
+            try:
+                if '/' in entry:
+                    ipaddress.ip_network(entry, strict=False)
+                else:
+                    ipaddress.ip_address(entry)
+            except ValueError:
+                return jsonify({"error": f"Invalid IP/CIDR: {entry}"}), 400
     webhook_url = data.get("webhook_url")
     if webhook_url:
         webhook_url = str(webhook_url).strip()
@@ -261,9 +280,9 @@ def create_note():
         save_attachment(note_id, attachment_blob)
         has_attachment = 1
     db.execute(
-        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url, no_copy) "
-        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)",
-        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown), webhook_url or None, int(no_copy)),
+        "INSERT INTO notes (id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url, no_copy, allowed_ips) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (note_id, content or '', int(burn_after_read), now.isoformat(), expires_at.isoformat(), max_reads, pw_hash, has_attachment, attachment_meta, int(is_markdown), webhook_url or None, int(no_copy), allowed_ips or None),
     )
     db.commit()
     base_url = request.host_url.rstrip("/")
@@ -272,6 +291,30 @@ def create_note():
         "url": f"{base_url}/note/{note_id}",
         "expires_at": expires_at.isoformat(),
     }), 201
+
+def check_ip_allowed(client_ip, allowed_ips_str):
+    """Check if client_ip is in the allowed IP/CIDR list."""
+    if not allowed_ips_str:
+        return True
+    try:
+        client = ipaddress.ip_address(client_ip)
+        for entry in allowed_ips_str.split(','):
+            entry = entry.strip()
+            if not entry:
+                continue
+            try:
+                if '/' in entry:
+                    network = ipaddress.ip_network(entry, strict=False)
+                    if client in network:
+                        return True
+                else:
+                    if client == ipaddress.ip_address(entry):
+                        return True
+            except ValueError:
+                continue
+        return False
+    except ValueError:
+        return True
 
 def send_webhook_notification(url, note_id, read_count):
     """Fire-and-forget webhook notification."""
@@ -298,7 +341,7 @@ def read_note(note_id):
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
 
-    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url, no_copy"
+    _NOTE_COLS = "id, content, burn_after_read, created_at, expires_at, read_count, max_reads, password_hash, has_attachment, attachment_meta, is_markdown, webhook_url, no_copy, allowed_ips"
     row = db.execute(f"SELECT {_NOTE_COLS} FROM notes WHERE id = ?", (note_id,)).fetchone()
     if row is None:
         return jsonify({"error": "Note not found or has expired"}), 404
@@ -313,6 +356,12 @@ def read_note(note_id):
         if not password or not check_password_hash(row["password_hash"], password):
             return jsonify({"error": "password_required", "password_protected": True}), 403
     is_password_protected = row["password_hash"] is not None
+
+    # IP restriction check
+    if row["allowed_ips"]:
+        client_ip = request.remote_addr
+        if not check_ip_allowed(client_ip, row["allowed_ips"]):
+            return jsonify({"error": "アクセスが制限されています"}), 403
 
     def _build_response(row, read_count, burn):
         resp = {
