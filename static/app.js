@@ -157,7 +157,7 @@ async function createNote() {
       max_reads: burnToggle ? 0 : maxReads,
       password: password,
       webhook_url: document.getElementById('webhookUrl').value.trim() || undefined,
-      no_copy: document.getElementById('noCopyToggle').checked,
+      no_copy: true,
       allowed_ips: document.getElementById('allowedIps').value.trim() || undefined,
       is_markdown: document.getElementById('markdownToggle').checked,
     };

@@ -113,7 +113,7 @@ def init_db():
     if "webhook_url" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN webhook_url TEXT")
     if "no_copy" not in columns:
-        conn.execute("ALTER TABLE notes ADD COLUMN no_copy INTEGER NOT NULL DEFAULT 0")
+        conn.execute("ALTER TABLE notes ADD COLUMN no_copy INTEGER NOT NULL DEFAULT 1")
     if "allowed_ips" not in columns:
         conn.execute("ALTER TABLE notes ADD COLUMN allowed_ips TEXT")
     # Migrate: move BLOB/TEXT attachment_data from DB to filesystem
@@ -249,7 +249,7 @@ def create_note():
     is_markdown = bool(data.get("is_markdown", False))
     password = data.get("password")
     pw_hash = generate_password_hash(password) if password else None
-    no_copy = bool(data.get("no_copy", False))
+    no_copy = bool(data.get("no_copy", True))
     allowed_ips = data.get("allowed_ips")
     if allowed_ips:
         allowed_ips = str(allowed_ips).strip()
