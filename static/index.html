@@ -647,6 +647,35 @@ input[type="password"]::placeholder {
   color: var(--accent2);
 }
 
+.read-status-banner {
+  padding: 0.6rem 0.85rem;
+  border-radius: calc(var(--radius) - 4px);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.read-status-banner.first-read {
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: var(--success);
+}
+
+.read-status-banner.multi-read {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+.read-status-banner.danger-read {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+}
+
 .loading {
   display: flex;
   flex-direction: column;
@@ -1030,6 +1059,7 @@ input[type="password"]::placeholder {
     <div id="readContent" class="card" style="display:none;">
       <div id="readNoteInner">
         <div id="burnTimerContainer"></div>
+        <div id="readStatusBanner" class="read-status-banner" style="display:none;"></div>
         <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
           <span style="font-size:1.25rem;">📄</span>
           <strong>秘密のメモ</strong>
