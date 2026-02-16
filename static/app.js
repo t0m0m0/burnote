@@ -156,6 +156,7 @@ async function createNote() {
       expires_minutes: parseInt(document.getElementById('expiry').value),
       max_reads: burnToggle ? 0 : maxReads,
       password: password,
+      is_markdown: document.getElementById('markdownToggle').checked,
     };
     if (encAttachmentData) {
       body.attachment_data = encAttachmentData;
@@ -331,7 +332,13 @@ async function fetchNote(password) {
   const noteTextEl = document.getElementById('noteText');
   const textHeader = noteTextEl.previousElementSibling; // the header div
   if (plaintext) {
-    noteTextEl.textContent = plaintext;
+    if (data.is_markdown && plaintext && typeof marked !== 'undefined') {
+      noteTextEl.innerHTML = DOMPurify.sanitize(marked.parse(plaintext));
+      noteTextEl.classList.add('markdown-body');
+    } else {
+      noteTextEl.textContent = plaintext;
+      noteTextEl.classList.remove('markdown-body');
+    }
     noteTextEl.style.display = 'block';
     if (textHeader) textHeader.style.display = 'flex';
   } else {
