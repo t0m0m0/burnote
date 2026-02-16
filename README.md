@@ -29,6 +29,27 @@ gunicorn -c gunicorn.ctl app:app
   - 全体で最大 500MB
 - 期限切れノートはバックグラウンドスレッド（60秒間隔）で自動削除されます
 
+
+## Docker でのセルフホスト
+
+```bash
+# ビルド＆起動
+docker compose up -d
+
+# ログ確認
+docker compose logs -f
+
+# 停止
+docker compose down
+```
+
+### 環境変数（Docker）
+
+| 変数名 | デフォルト | 説明 |
+|---|---|---|
+| `PORT` | `8000` | 公開ポート |
+| `RATE_LIMIT_STORAGE_URI` | `memory://` | レートリミットのストレージ |
+
 ### Redis によるレートリミット共有（推奨）
 
 デフォルトではインメモリストレージを使用します。gunicorn で複数ワーカーを動かす場合、ワーカー間でレートリミット状態が共有されず、プロセス再起動時にリセットされます。
