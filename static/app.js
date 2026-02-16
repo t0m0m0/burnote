@@ -593,7 +593,138 @@ function updateCharCounter() {
   counter.textContent = len.toLocaleString() + '文字';
   counter.classList.remove('warning', 'danger');
 }
-document.getElementById('noteContent').addEventListener('input', updateCharCounter);
+document.getElementById('noteContent').addEventListener('input', function() {
+  updateCharCounter();
+  updateMdPreview();
+});
+
+// ---------------------------------------------------------------------------
+// Markdown Editor: toolbar, live preview, tab switching
+// ---------------------------------------------------------------------------
+(function() {
+  const mdToggle = document.getElementById('markdownToggle');
+  const mdWrap = document.getElementById('mdEditorWrap');
+  const mdToolbar = document.getElementById('mdToolbar');
+  const mdTabs = document.getElementById('mdTabs');
+  const mdPaneEdit = document.getElementById('mdPaneEdit');
+  const mdPanePreview = document.getElementById('mdPanePreview');
+  const mdPreviewContent = document.getElementById('mdPreviewContent');
+  const textarea = document.getElementById('noteContent');
+
+  // --- Toggle markdown mode ---
+  mdToggle.addEventListener('change', function() {
+    if (this.checked) {
+      mdWrap.classList.add('md-active');
+      mdToolbar.classList.add('active');
+      updateMdPreview();
+    } else {
+      mdWrap.classList.remove('md-active');
+      mdToolbar.classList.remove('active');
+      mdPanePreview.classList.remove('active');
+      mdPaneEdit.classList.remove('hidden');
+      // Reset mobile tabs
+      mdTabs.querySelectorAll('button').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tab === 'edit');
+      });
+    }
+  });
+
+  // --- Mobile tab switching ---
+  mdTabs.addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-tab]');
+    if (!btn) return;
+    const tab = btn.dataset.tab;
+    mdTabs.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (tab === 'edit') {
+      mdPaneEdit.classList.remove('hidden');
+      mdPanePreview.classList.remove('active');
+    } else {
+      mdPaneEdit.classList.add('hidden');
+      mdPanePreview.classList.add('active');
+      updateMdPreview();
+    }
+  });
+
+  // --- Toolbar actions ---
+  const mdActions = {
+    h1:         { before: '# ', after: '', placeholder: '見出し', block: true },
+    h2:         { before: '## ', after: '', placeholder: '見出し', block: true },
+    h3:         { before: '### ', after: '', placeholder: '見出し', block: true },
+    bold:       { before: '**', after: '**', placeholder: '太字テキスト' },
+    italic:     { before: '*', after: '*', placeholder: '斜体テキスト' },
+    strike:     { before: '~~', after: '~~', placeholder: '取り消しテキスト' },
+    code:       { before: '`', after: '`', placeholder: 'コード' },
+    codeblock:  { before: '```\n', after: '\n```', placeholder: 'コード', block: true },
+    link:       { before: '[', after: '](url)', placeholder: 'リンクテキスト' },
+    image:      { before: '![', after: '](url)', placeholder: '画像の説明' },
+    ul:         { before: '- ', after: '', placeholder: '項目', block: true },
+    ol:         { before: '1. ', after: '', placeholder: '項目', block: true },
+    blockquote: { before: '> ', after: '', placeholder: '引用文', block: true },
+    hr:         { before: '\n---\n', after: '', placeholder: '', block: true, noSelect: true },
+    table:      { before: '\n| 見出し1 | 見出し2 | 見出し3 |\n|---|---|---|\n| ', after: ' | データ | データ |\n', placeholder: 'データ', block: true },
+  };
+
+  mdToolbar.addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-md]');
+    if (!btn) return;
+    const action = mdActions[btn.dataset.md];
+    if (!action) return;
+    insertMd(action);
+  });
+
+  function insertMd(action) {
+    textarea.focus();
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+
+    let before = action.before;
+    let after = action.after;
+    let insert;
+
+    // For block-level actions, ensure we start on a new line
+    if (action.block && start > 0 && text[start - 1] !== '\n') {
+      before = '\n' + before;
+    }
+
+    if (selected && !action.noSelect) {
+      insert = before + selected + after;
+    } else {
+      insert = before + (action.noSelect ? '' : action.placeholder) + after;
+    }
+
+    // Use execCommand for undo support, fallback to manual
+    textarea.setRangeText(insert, start, end, 'end');
+
+    // Set selection on placeholder if nothing was selected
+    if (!selected && !action.noSelect && action.placeholder) {
+      const pStart = start + before.length;
+      const pEnd = pStart + action.placeholder.length;
+      textarea.setSelectionRange(pStart, pEnd);
+    }
+
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+})();
+
+function updateMdPreview() {
+  if (!document.getElementById('markdownToggle').checked) return;
+  const textarea = document.getElementById('noteContent');
+  const previewEl = document.getElementById('mdPreviewContent');
+  if (!textarea || !previewEl) return;
+  const raw = textarea.value;
+  if (!raw.trim()) {
+    previewEl.innerHTML = '';
+    return;
+  }
+  if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+    previewEl.innerHTML = DOMPurify.sanitize(marked.parse(raw));
+  } else {
+    previewEl.textContent = raw;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Toggle interaction: burn-after-read disables max reads

@@ -1695,6 +1695,259 @@ details > .options {
 .markdown-body th { background: var(--surface2); }
 .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
 
+/* ---- Markdown Editor ---- */
+.md-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.md-toggle-bar .toggle {
+  font-size: 0.82rem;
+}
+
+.md-editor-wrap {
+  position: relative;
+}
+
+/* Toolbar */
+.md-toolbar {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 0.4rem 0.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow-x: auto;
+}
+.md-toolbar.active {
+  display: flex;
+}
+.md-toolbar-sep {
+  width: 1px;
+  height: 1.2rem;
+  background: var(--border);
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+.md-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 0.35rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+.md-toolbar button:hover {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+.md-toolbar button:active {
+  background: var(--bg);
+}
+.md-toolbar button .tb-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* Editor + Preview layout */
+.md-editor-body {
+  display: flex;
+  flex-direction: column;
+}
+.md-editor-body.split {
+  flex-direction: row;
+  gap: 0;
+}
+.md-editor-body.split .md-pane-edit,
+.md-editor-body.split .md-pane-preview {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+.md-editor-body.split .md-pane-edit textarea {
+  border-radius: 0 0 0 var(--radius);
+  border-right: none;
+  height: 100%;
+  min-height: 280px;
+}
+.md-editor-body.split .md-pane-preview {
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 0 var(--radius) 0;
+  background: var(--surface2);
+}
+/* When toolbar active, textarea top corners become square */
+.md-toolbar.active + .md-editor-body textarea,
+.md-toolbar.active + .md-editor-body .md-pane-edit textarea {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.md-toolbar.active + .md-editor-body.split .md-pane-preview {
+  border-top-right-radius: 0;
+}
+
+/* Mobile tabs */
+.md-tabs {
+  display: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.md-tabs button {
+  flex: 1;
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.md-tabs button.active {
+  color: var(--accent2);
+  border-bottom-color: var(--accent);
+}
+.md-tabs button:hover:not(.active) {
+  color: var(--text);
+}
+
+/* Preview panel */
+.md-pane-preview {
+  display: none;
+  position: relative;
+}
+.md-pane-preview.active {
+  display: block;
+}
+.md-preview-label {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  opacity: 0.5;
+  pointer-events: none;
+  letter-spacing: 0.04em;
+}
+.md-preview-content {
+  padding: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text);
+  overflow-y: auto;
+  min-height: 220px;
+  max-height: 400px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.md-preview-content::-webkit-scrollbar {
+  width: 6px;
+}
+.md-preview-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.md-preview-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.md-preview-content:empty::before {
+  content: 'Markdownプレビューがここに表示されます...';
+  color: var(--text-dim);
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Desktop: side-by-side */
+@media (min-width: 769px) {
+  .md-editor-wrap.md-active .md-editor-body {
+    flex-direction: row;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-edit,
+  .md-editor-wrap.md-active .md-editor-body .md-pane-preview {
+    flex: 1 1 50%;
+    min-width: 0;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-edit textarea {
+    border-radius: 0 0 0 var(--radius);
+    border-right: none;
+    min-height: 280px;
+    resize: none;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-preview {
+    display: block;
+    border: 1px solid var(--border);
+    border-left: none;
+    border-radius: 0 0 var(--radius) 0;
+    background: var(--surface2);
+  }
+  .md-editor-wrap.md-active .md-tabs {
+    display: none !important;
+  }
+  /* Fix preview border-top-right when toolbar is active */
+  .md-toolbar.active + .md-editor-body .md-pane-preview {
+    border-top-right-radius: 0;
+  }
+}
+
+/* Mobile: tabbed */
+@media (max-width: 768px) {
+  .md-editor-wrap.md-active .md-tabs {
+    display: flex;
+  }
+  .md-editor-wrap.md-active .md-editor-body {
+    flex-direction: column;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-edit {
+    display: block;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-edit textarea {
+    border-radius: 0;
+    border-top: none;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-preview {
+    display: none;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: var(--surface2);
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-edit.hidden {
+    display: none;
+  }
+  .md-editor-wrap.md-active .md-editor-body .md-pane-preview.active {
+    display: block;
+  }
+  .md-editor-wrap.md-active .md-toolbar.active + .md-editor-body .md-pane-edit textarea {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}
+
+/* Transition for toggle */
+.md-editor-wrap .md-toolbar,
+.md-editor-wrap .md-pane-preview,
+.md-editor-wrap .md-tabs {
+  transition: opacity 0.2s ease;
+}
+
 </style>
 </head>
 <body>
@@ -1712,8 +1965,59 @@ details > .options {
   <!-- CREATE VIEW -->
   <div id="createView">
     <div class="card stagger-2">
-      <textarea id="noteContent" placeholder="ここに秘密のメモを入力...
+      <!-- Markdown toggle (prominent) -->
+      <div class="md-toggle-bar">
+        <label class="toggle">
+          <input type="checkbox" id="markdownToggle">
+          <span class="toggle-slider"></span>
+          📝 Markdownエディタ
+        </label>
+      </div>
+
+      <!-- Markdown editor wrapper -->
+      <div class="md-editor-wrap" id="mdEditorWrap">
+        <!-- Toolbar -->
+        <div class="md-toolbar" id="mdToolbar">
+          <button type="button" data-md="h1" title="見出し1"><span class="tb-icon">H1</span></button>
+          <button type="button" data-md="h2" title="見出し2"><span class="tb-icon">H2</span></button>
+          <button type="button" data-md="h3" title="見出し3"><span class="tb-icon">H3</span></button>
+          <span class="md-toolbar-sep"></span>
+          <button type="button" data-md="bold" title="太字"><span class="tb-icon"><b>B</b></span></button>
+          <button type="button" data-md="italic" title="斜体"><span class="tb-icon"><i>I</i></span></button>
+          <button type="button" data-md="strike" title="取り消し線"><span class="tb-icon"><s>S</s></span></button>
+          <span class="md-toolbar-sep"></span>
+          <button type="button" data-md="code" title="インラインコード"><span class="tb-icon">`</span></button>
+          <button type="button" data-md="codeblock" title="コードブロック"><span class="tb-icon">{}</span></button>
+          <span class="md-toolbar-sep"></span>
+          <button type="button" data-md="link" title="リンク"><span class="tb-icon">🔗</span></button>
+          <button type="button" data-md="image" title="画像"><span class="tb-icon">🖼</span></button>
+          <span class="md-toolbar-sep"></span>
+          <button type="button" data-md="ul" title="箇条書き"><span class="tb-icon">• —</span></button>
+          <button type="button" data-md="ol" title="番号リスト"><span class="tb-icon">1.</span></button>
+          <button type="button" data-md="blockquote" title="引用"><span class="tb-icon">❝</span></button>
+          <span class="md-toolbar-sep"></span>
+          <button type="button" data-md="hr" title="水平線"><span class="tb-icon">―</span></button>
+          <button type="button" data-md="table" title="表"><span class="tb-icon">⊞</span></button>
+        </div>
+
+        <!-- Mobile tabs -->
+        <div class="md-tabs" id="mdTabs">
+          <button type="button" class="active" data-tab="edit">✏️ 編集</button>
+          <button type="button" data-tab="preview">👁 プレビュー</button>
+        </div>
+
+        <!-- Editor body -->
+        <div class="md-editor-body" id="mdEditorBody">
+          <div class="md-pane-edit" id="mdPaneEdit">
+            <textarea id="noteContent" placeholder="ここに秘密のメモを入力...
 読まれた後、煙のように消えます。"></textarea>
+          </div>
+          <div class="md-pane-preview" id="mdPanePreview">
+            <span class="md-preview-label">プレビュー</span>
+            <div class="md-preview-content markdown-body" id="mdPreviewContent"></div>
+          </div>
+        </div>
+      </div>
       <div id="charCounter" class="char-counter">0文字</div>
       <!-- Primary options - always visible -->
       <div class="options">
@@ -1757,14 +2061,7 @@ details > .options {
             <label for="notePassword">🔑 パスワード（任意）</label>
             <input type="password" id="notePassword" placeholder="未設定">
           </div>
-          <div class="option-group">
-            <label>📝 Markdown</label>
-            <label class="toggle">
-              <input type="checkbox" id="markdownToggle">
-              <span class="toggle-slider"></span>
-              Markdownで表示
-            </label>
-          </div>
+
         </div>
 
         <!-- Tertiary options - nested collapsible -->
