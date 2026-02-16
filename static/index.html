@@ -917,6 +917,205 @@ input[type="password"]::placeholder {
   }
 }
 
+/* Inline style refactoring - CSS classes */
+#attachmentArea {
+  margin-top: 1rem;
+}
+
+.attachment-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+#dropZone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: var(--surface2);
+}
+
+.drop-zone-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.drop-zone-text {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.file-preview-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#fileThumb {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.file-info-left {
+  text-align: left;
+}
+
+#fileName {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+#fileSize {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+#fileRemoveBtn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: 'Inter', sans-serif;
+}
+
+#fileSizeError {
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin-top: 0.4rem;
+}
+
+.upload-progress-track {
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+#uploadProgressBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+#uploadProgressText {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+  text-align: center;
+}
+
+#createBtn {
+  margin-top: 1rem;
+}
+
+.result-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+}
+
+.result-url-box {
+  margin-top: 0.75rem;
+}
+
+.section-center {
+  text-align: center;
+}
+
+.section-mt-1 {
+  margin-top: 1rem;
+}
+
+.section-mt-125 {
+  margin-top: 1.25rem;
+}
+
+.read-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.read-header-icon {
+  font-size: 1.25rem;
+}
+
+.attachment-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.attachment-header-icon {
+  font-size: 1rem;
+}
+
+.attachment-header-title {
+  font-size: 0.9rem;
+}
+
+#attachmentPreview {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.attachment-download {
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+#downloadBtn {
+  width: auto;
+  padding: 0 1.5rem;
+}
+
+.not-found-new-link {
+  margin-top: 1rem;
+}
+
+#passwordError {
+  color: var(--danger);
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+.option-advanced {
+  margin-top: 0.5rem;
+}
+
+.option-full-width {
+  flex-basis: 100%;
+}
+
+.option-help {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.2rem;
+  display: block;
+}
+
 #dropZone.drag-over {
   border-color: var(--accent) !important;
   background: rgba(139, 92, 246, 0.08) !important;
@@ -1198,49 +1397,49 @@ input[type="password"]::placeholder {
           </label>
         </div>
       </div>
-      <div class="options" style="margin-top:0.5rem;">
-        <div class="option-group" style="flex-basis:100%;">
+      <div class="options option-advanced">
+        <div class="option-group option-full-width">
           <label for="webhookUrl">🔔 既読通知 Webhook URL（任意）</label>
           <input type="text" id="webhookUrl" placeholder="https://example.com/webhook">
-          <span style="font-size:0.75rem; color:var(--text-dim); margin-top:0.2rem; display:block;">メモが閲覧されるとこのURLにPOST通知を送信します</span>
+          <span class="option-help">メモが閲覧されるとこのURLにPOST通知を送信します</span>
         </div>
       </div>
-      <div class="options" style="margin-top:0.5rem;">
-        <div class="option-group" style="flex-basis:100%;">
+      <div class="options option-advanced">
+        <div class="option-group option-full-width">
           <label for="allowedIps">🌐 IP制限（任意）</label>
           <input type="text" id="allowedIps" placeholder="例: 192.168.1.0/24, 10.0.0.1">
-          <span style="font-size:0.75rem; color:var(--text-dim); margin-top:0.2rem; display:block;">許可するIPアドレスまたはCIDRをカンマ区切りで指定（VPN/プロキシによる回避は可能）</span>
+          <span class="option-help">許可するIPアドレスまたはCIDRをカンマ区切りで指定（VPN/プロキシによる回避は可能）</span>
         </div>
       </div>
       <!-- Attachment area -->
-      <div id="attachmentArea" style="margin-top:1rem;">
-        <label style="font-size:0.8rem; font-weight:500; color:var(--text-dim); letter-spacing:0.02em; display:block; margin-bottom:0.4rem;">📎 ファイル添付（任意・最大3MB）</label>
-        <div id="dropZone" style="border:2px dashed var(--border); border-radius:var(--radius); padding:1.5rem; text-align:center; cursor:pointer; transition:all 0.25s ease; background:var(--surface2);">
+      <div id="attachmentArea">
+        <label class="attachment-label">📎 ファイル添付（任意・最大3MB）</label>
+        <div id="dropZone">
           <div id="dropZoneContent">
-            <div style="font-size:1.5rem; margin-bottom:0.25rem;">📎</div>
-            <div style="font-size:0.85rem; color:var(--text-dim);">クリックまたはドラッグ＆ドロップでファイルを添付</div>
+            <div class="drop-zone-icon">📎</div>
+            <div class="drop-zone-text">クリックまたはドラッグ＆ドロップでファイルを添付</div>
           </div>
           <div id="filePreview" style="display:none;">
-            <div style="display:flex; align-items:center; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
-              <img id="fileThumb" style="display:none; max-width:120px; max-height:80px; border-radius:6px; object-fit:cover;">
-              <div style="text-align:left;">
-                <div id="fileName" style="font-size:0.9rem; font-weight:500;"></div>
-                <div id="fileSize" style="font-size:0.78rem; color:var(--text-dim);"></div>
+            <div class="file-preview-inner">
+              <img id="fileThumb" style="display:none;">
+              <div class="file-info-left">
+                <div id="fileName"></div>
+                <div id="fileSize"></div>
               </div>
-              <button type="button" id="fileRemoveBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:var(--danger); border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem; font-family:Inter,sans-serif;">✕ 削除</button>
+              <button type="button" id="fileRemoveBtn">✕ 削除</button>
             </div>
           </div>
           <input type="file" id="fileInput" style="display:none;">
         </div>
-        <div id="fileSizeError" style="display:none; color:var(--danger); font-size:0.82rem; margin-top:0.4rem;">⚠️ ファイルサイズが3MBを超えています。</div>
-        <div id="uploadProgress" style="display:none; margin-top:0.5rem;">
-          <div style="height:4px; background:var(--surface2); border-radius:2px; overflow:hidden;">
-            <div id="uploadProgressBar" style="height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); border-radius:2px; width:0%; transition:width 0.3s ease;"></div>
+        <div id="fileSizeError" style="display:none;">⚠️ ファイルサイズが3MBを超えています。</div>
+        <div id="uploadProgress" style="display:none;">
+          <div class="upload-progress-track">
+            <div id="uploadProgressBar"></div>
           </div>
-          <div id="uploadProgressText" style="font-size:0.78rem; color:var(--text-dim); margin-top:0.25rem; text-align:center;">暗号化中...</div>
+          <div id="uploadProgressText">暗号化中...</div>
         </div>
       </div>
-      <button class="btn btn-primary" id="createBtn" style="margin-top:1rem;">
+      <button class="btn btn-primary" id="createBtn">
         🔒 秘密のメモを作成
       </button>
     </div>
@@ -1248,8 +1447,8 @@ input[type="password"]::placeholder {
     <!-- Result -->
     <div class="card result" id="resultCard">
       <strong>✅ メモを作成しました！</strong>
-      <p style="font-size:0.85rem; color:var(--text-dim); margin-top:0.25rem;">このリンクを共有してください。</p>
-      <div class="url-box" style="margin-top:0.75rem;">
+      <p class="result-subtitle">このリンクを共有してください。</p>
+      <div class="url-box result-url-box">
         <input type="text" id="noteUrl" readonly>
         <button class="btn" id="copyBtn">📋 コピー</button>
       </div>
@@ -1259,7 +1458,7 @@ input[type="password"]::placeholder {
         <span>このメモは閲覧後に消滅します</span>
       </div>
       <div id="copySuccessPrompt" class="copy-success-prompt" style="display:none;">✨ もう1つ秘密のメモを作成しますか？</div>
-      <div style="text-align:center; margin-top:1rem;">
+      <div class="section-center section-mt-1">
         <a href="/" id="newNoteLink" class="btn-new">+ 新しいメモを作成</a>
       </div>
     </div>
@@ -1275,19 +1474,19 @@ input[type="password"]::placeholder {
       <div id="readNoteInner">
         <div id="burnTimerContainer"></div>
         <div id="readStatusBanner" class="read-status-banner" style="display:none;"></div>
-        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
-          <span style="font-size:1.25rem;">📄</span>
+        <div class="read-header">
+          <span class="read-header-icon">📄</span>
           <strong>秘密のメモ</strong>
         </div>
         <div class="note-content" id="noteText"></div>
-        <div id="attachmentView" style="display:none; margin-top:1rem;">
-          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
-            <span style="font-size:1rem;">📎</span>
-            <strong style="font-size:0.9rem;">添付ファイル</strong>
+        <div id="attachmentView" style="display:none;" class="section-mt-1">
+          <div class="attachment-header">
+            <span class="attachment-header-icon">📎</span>
+            <strong class="attachment-header-title">添付ファイル</strong>
           </div>
-          <div id="attachmentPreview" style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; text-align:center;"></div>
-          <div style="text-align:center; margin-top:0.75rem;">
-            <button class="btn" id="downloadBtn" style="width:auto; padding:0 1.5rem;">📥 ダウンロード</button>
+          <div id="attachmentPreview"></div>
+          <div class="attachment-download">
+            <button class="btn" id="downloadBtn">📥 ダウンロード</button>
           </div>
         </div>
         <div class="meta" id="noteMeta"></div>
@@ -1297,7 +1496,7 @@ input[type="password"]::placeholder {
         <h2>煙のように消えました</h2>
         <p>内容はサーバーから完全に削除されました。<br>もう誰も読むことはできません。</p>
       </div>
-      <div style="text-align:center; margin-top:1.25rem;">
+      <div class="section-center section-mt-125">
         <a href="/" class="btn-new">+ 新しいメモを作成</a>
       </div>
     </div>
@@ -1306,7 +1505,7 @@ input[type="password"]::placeholder {
         <div class="not-found-icon">💨</div>
         <h2>メモが見つかりません</h2>
         <p>このメモは既に消滅したか、有効期限が切れています。</p>
-        <a href="/" class="btn-new" style="margin-top:1rem;">+ 新しいメモを作成</a>
+        <a href="/" class="btn-new not-found-new-link">+ 新しいメモを作成</a>
       </div>
     </div>
   </div>
@@ -1320,7 +1519,7 @@ input[type="password"]::placeholder {
         <input type="password" id="readPassword" placeholder="パスワードを入力">
         <button class="btn btn-primary" id="submitPasswordBtn">🔓 解錠</button>
       </div>
-      <p id="passwordError" style="color:var(--danger); font-size:0.85rem; text-align:center; margin-top:0.75rem; display:none;">パスワードが正しくありません</p>
+      <p id="passwordError" style="display:none;">パスワードが正しくありません</p>
     </div>
   </div>
 
