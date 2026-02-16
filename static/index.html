@@ -144,8 +144,8 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
+  padding: 1.75rem;
+  margin-bottom: 1.75rem;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -156,7 +156,7 @@ body {
 
 textarea {
   width: 100%;
-  min-height: 180px;
+  min-height: 220px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -358,6 +358,7 @@ input[type="password"]::placeholder {
 .result.show {
   display: block;
   animation: slideIn 0.4s ease forwards;
+  border-top: 2px solid var(--accent);
 }
 
 .url-box {
@@ -1110,6 +1111,43 @@ input[type="password"]::placeholder {
   flex-basis: 100%;
 }
 
+details {
+  margin-top: 0.75rem;
+}
+
+details summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  padding: 0.5rem 0;
+  user-select: none;
+  transition: color 0.2s ease;
+  list-style: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+details summary:hover {
+  color: var(--text);
+}
+
+details > .options {
+  animation: slideIn 0.3s ease forwards;
+}
+
 .option-help {
   font-size: 0.75rem;
   color: var(--text-dim);
@@ -1339,25 +1377,8 @@ input[type="password"]::placeholder {
       <textarea id="noteContent" placeholder="ここに秘密のメモを入力...
 読まれた後、煙のように消えます。"></textarea>
       <div id="charCounter" class="char-counter">0文字</div>
+      <!-- Primary options - always visible -->
       <div class="options">
-        <div class="option-group">
-          <label>消滅モード</label>
-          <label class="toggle">
-            <input type="checkbox" id="burnToggle" checked>
-            <span class="toggle-slider"></span>
-            💨 既読で消滅
-          </label>
-        </div>
-        <div class="option-group">
-          <label for="maxReads">📊 閲覧回数</label>
-          <select id="maxReads">
-            <option value="0">無制限</option>
-            <option value="1" selected>1回</option>
-            <option value="3">3回</option>
-            <option value="5">5回</option>
-            <option value="10">10回</option>
-          </select>
-        </div>
         <div class="option-group">
           <label for="expiry">⏱ 有効期限</label>
           <select id="expiry">
@@ -1370,33 +1391,63 @@ input[type="password"]::placeholder {
             <option value="43200">30日</option>
           </select>
         </div>
-        <div class="option-group">
-          <label for="notePassword">🔑 パスワード（任意）</label>
-          <input type="password" id="notePassword" placeholder="未設定">
-        </div>
-        <div class="option-group">
-          <label>📝 Markdown</label>
-          <label class="toggle">
-            <input type="checkbox" id="markdownToggle">
-            <span class="toggle-slider"></span>
-            Markdownで表示
-          </label>
-        </div>
       </div>
-      <div class="options option-advanced">
-        <div class="option-group option-full-width">
-          <label for="webhookUrl">🔔 既読通知 Webhook URL（任意）</label>
-          <input type="text" id="webhookUrl" placeholder="https://example.com/webhook">
-          <span class="option-help">メモが閲覧されるとこのURLにPOST通知を送信します</span>
+
+      <!-- Secondary options - collapsible -->
+      <details>
+        <summary>⚙️ 詳細設定</summary>
+        <div class="options">
+          <div class="option-group">
+            <label>消滅モード</label>
+            <label class="toggle">
+              <input type="checkbox" id="burnToggle" checked>
+              <span class="toggle-slider"></span>
+              💨 既読で消滅
+            </label>
+          </div>
+          <div class="option-group">
+            <label for="maxReads">📊 閲覧回数</label>
+            <select id="maxReads">
+              <option value="0">無制限</option>
+              <option value="1" selected>1回</option>
+              <option value="3">3回</option>
+              <option value="5">5回</option>
+              <option value="10">10回</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label for="notePassword">🔑 パスワード（任意）</label>
+            <input type="password" id="notePassword" placeholder="未設定">
+          </div>
+          <div class="option-group">
+            <label>📝 Markdown</label>
+            <label class="toggle">
+              <input type="checkbox" id="markdownToggle">
+              <span class="toggle-slider"></span>
+              Markdownで表示
+            </label>
+          </div>
         </div>
-      </div>
-      <div class="options option-advanced">
-        <div class="option-group option-full-width">
-          <label for="allowedIps">🌐 IP制限（任意）</label>
-          <input type="text" id="allowedIps" placeholder="例: 192.168.1.0/24, 10.0.0.1">
-          <span class="option-help">許可するIPアドレスまたはCIDRをカンマ区切りで指定（VPN/プロキシによる回避は可能）</span>
-        </div>
-      </div>
+
+        <!-- Tertiary options - nested collapsible -->
+        <details>
+          <summary>🔧 高度な設定</summary>
+          <div class="options option-advanced">
+            <div class="option-group option-full-width">
+              <label for="webhookUrl">🔔 既読通知 Webhook URL（任意）</label>
+              <input type="text" id="webhookUrl" placeholder="https://example.com/webhook">
+              <span class="option-help">メモが閲覧されるとこのURLにPOST通知を送信します</span>
+            </div>
+          </div>
+          <div class="options option-advanced">
+            <div class="option-group option-full-width">
+              <label for="allowedIps">🌐 IP制限（任意）</label>
+              <input type="text" id="allowedIps" placeholder="例: 192.168.1.0/24, 10.0.0.1">
+              <span class="option-help">許可するIPアドレスまたはCIDRをカンマ区切りで指定（VPN/プロキシによる回避は可能）</span>
+            </div>
+          </div>
+        </details>
+      </details>
       <!-- Attachment area -->
       <div id="attachmentArea">
         <label class="attachment-label">📎 ファイル添付（任意・最大3MB）</label>
